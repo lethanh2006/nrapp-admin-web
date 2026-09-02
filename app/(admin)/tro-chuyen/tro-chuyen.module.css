@@ -1,0 +1,101 @@
+.chatShell {
+  display: grid;
+  min-height: 600px;
+  height: calc(100vh - 236px);
+  grid-template-columns: 340px minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid var(--slate-200);
+  border-radius: 24px;
+  background: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.conversationPanel { display: flex; min-width: 0; flex-direction: column; border-right: 1px solid var(--slate-200); background: #fff; }
+.panelHeader { display: flex; height: 75px; flex: 0 0 auto; align-items: center; justify-content: space-between; padding: 0 19px; background: linear-gradient(135deg, #7f1d1d, #991b1b); color: white; }
+.panelHeader p { margin: 0 0 4px; color: #fecaca; font-size: 8px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+.panelHeader h2 { margin: 0; font-size: 15px; font-weight: 900; letter-spacing: -.02em; }
+.messageCount { display: grid; min-width: 30px; height: 30px; place-items: center; border: 1px solid rgba(255,255,255,.14); border-radius: 10px; background: rgba(255,255,255,.1); color: #fecaca; font-size: 10px; font-weight: 900; }
+.searchBox { display: flex; height: 41px; flex: 0 0 auto; align-items: center; gap: 8px; margin: 14px 14px 8px; border: 1px solid var(--slate-200); border-radius: 12px; padding: 0 11px; background: var(--slate-50); color: var(--slate-400); }
+.searchBox input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--slate-800); font-size: 11px; }
+.filterRow { display: flex; flex: 0 0 auto; gap: 5px; padding: 0 14px 10px; border-bottom: 1px solid var(--slate-100); }
+.filterRow button { display: inline-flex; height: 28px; align-items: center; gap: 5px; cursor: pointer; border-radius: 9px; padding: 0 9px; background: transparent; color: var(--slate-500); font-size: 9px; font-weight: 800; }
+.filterRow button span { display: grid; min-width: 16px; height: 16px; place-items: center; border-radius: 6px; background: var(--red-100); color: var(--red-700); font-size: 8px; }
+.filterRow .filterActive { background: var(--red-50); color: var(--red-700); }
+.conversationList { flex: 1; overflow-y: auto; padding: 6px 8px; }
+.conversationItem { display: flex; width: 100%; align-items: center; gap: 10px; cursor: pointer; border-radius: 14px; padding: 10px; background: transparent; text-align: left; transition: background 160ms ease; }
+.conversationItem:hover { background: var(--slate-50); }
+.conversationActive { background: var(--red-50) !important; }
+.conversationCopy { min-width: 0; flex: 1; }
+.conversationTop, .conversationBottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.conversationTop strong { overflow: hidden; color: var(--slate-800); font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.conversationTop time { flex: 0 0 auto; color: var(--slate-400); font-size: 8px; }
+.conversationBottom { margin-top: 5px; }
+.conversationBottom > span { overflow: hidden; color: var(--slate-500); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.conversationBottom b { display: grid; min-width: 18px; height: 18px; flex: 0 0 auto; place-items: center; border-radius: 50%; background: var(--red-600); color: white; font-size: 8px; }
+.emptySearch { display: flex; align-items: center; flex-direction: column; padding: 48px 15px; color: var(--slate-300); text-align: center; }
+.emptySearch strong { margin-top: 10px; color: var(--slate-600); font-size: 11px; }
+.emptySearch span { margin-top: 4px; color: var(--slate-400); font-size: 9px; }
+.teamStatus { display: flex; min-height: 46px; flex: 0 0 auto; align-items: center; justify-content: space-between; padding: 0 15px; border-top: 1px solid var(--slate-100); background: var(--slate-50); }
+.teamStatus span { display: flex; align-items: center; gap: 5px; color: #059669; font-size: 9px; font-weight: 750; }
+.teamStatus button { cursor: pointer; background: transparent; color: var(--red-600); font-size: 9px; font-weight: 850; }
+
+.messagePanel { display: flex; min-width: 0; flex-direction: column; background: #f8fafc; }
+.messageHeader { display: flex; height: 75px; flex: 0 0 auto; align-items: center; gap: 10px; border-bottom: 1px solid var(--slate-200); padding: 0 18px; background: white; }
+.messagePerson { display: flex; min-width: 0; flex: 1; flex-direction: column; }
+.messagePerson strong { overflow: hidden; color: var(--slate-800); font-size: 12px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
+.messagePerson span { margin-top: 3px; color: #059669; font-size: 9px; font-weight: 650; }
+.messageActions { display: flex; align-items: center; gap: 5px; }
+.messageActions button, .mobileBack { display: grid; width: 34px; height: 34px; cursor: pointer; place-items: center; border-radius: 10px; background: var(--slate-50); color: var(--slate-500); transition: background 160ms ease, color 160ms ease; }
+.messageActions button:hover { background: var(--red-50); color: var(--red-600); }
+.mobileBack { display: none; }
+.messages { flex: 1; overflow-y: auto; padding: 20px clamp(15px, 3vw, 36px); background: radial-gradient(circle at 20% 10%, rgba(254,226,226,.45), transparent 28%), #f8fafc; }
+.dayDivider { display: flex; align-items: center; gap: 10px; margin: 2px 0 21px; color: var(--slate-400); font-size: 8px; font-weight: 800; }
+.dayDivider::before, .dayDivider::after { height: 1px; flex: 1; content: ""; background: var(--slate-200); }
+.dayDivider span { border: 1px solid var(--slate-200); border-radius: 999px; padding: 5px 9px; background: white; }
+.messageRow { display: flex; align-items: flex-start; gap: 8px; margin-top: 8px; }
+.messageRowAdmin { justify-content: flex-end; }
+.avatarSpacer { width: 34px; flex: 0 0 auto; }
+.bubbleWrap { max-width: min(72%, 570px); }
+.bubbleWrapAdmin { display: flex; align-items: flex-end; flex-direction: column; }
+.bubble { border-radius: 8px 17px 17px 17px; padding: 10px 13px; font-size: 11px; line-height: 1.6; }
+.bubbleMember { border: 1px solid var(--slate-200); background: white; color: var(--slate-700); box-shadow: 0 3px 10px rgba(15,23,42,.04); }
+.bubbleAdmin { border-radius: 17px 8px 17px 17px; background: var(--red-600); color: white; box-shadow: 0 5px 14px rgba(220,38,38,.15); }
+.messageTime { display: inline-flex; align-items: center; gap: 3px; margin-top: 4px; color: var(--slate-400); font-size: 8px; }
+.messageRowAdmin .messageTime { color: var(--slate-400); }
+.typingRow { display: flex; align-items: center; gap: 8px; margin-top: 12px; color: var(--slate-400); font-size: 8px; }
+.typingBubble { display: flex; gap: 3px; border: 1px solid var(--slate-200); border-radius: 8px 14px 14px 14px; padding: 9px 11px; background: white; }
+.typingBubble i { width: 5px; height: 5px; border-radius: 50%; background: var(--slate-400); animation: typing 1.2s infinite ease-in-out; }
+.typingBubble i:nth-child(2) { animation-delay: .15s; }
+.typingBubble i:nth-child(3) { animation-delay: .3s; }
+.composer { display: flex; min-height: 76px; flex: 0 0 auto; align-items: flex-end; gap: 9px; border-top: 1px solid var(--slate-200); padding: 13px 16px; background: white; }
+.composerTools { display: flex; align-items: center; gap: 3px; }
+.composerTools button, .messageInput button { display: grid; width: 34px; height: 40px; cursor: pointer; place-items: center; border-radius: 10px; background: transparent; color: var(--slate-400); }
+.composerTools button:hover, .messageInput button:hover { background: var(--slate-50); color: var(--red-600); }
+.messageInput { display: flex; min-height: 46px; flex: 1; align-items: flex-end; border: 1px solid var(--slate-200); border-radius: 15px; padding: 2px 5px 2px 13px; background: var(--slate-50); }
+.messageInput:focus-within { border-color: #fca5a5; background: white; box-shadow: 0 0 0 4px rgba(220,38,38,.06); }
+.messageInput textarea { min-height: 40px; max-height: 100px; flex: 1; resize: none; border: 0; outline: 0; padding: 10px 0 7px; background: transparent; color: var(--slate-800); font-size: 11px; line-height: 1.5; }
+.sendButton { display: grid; width: 44px; height: 44px; flex: 0 0 auto; cursor: pointer; place-items: center; border-radius: 14px; background: var(--red-600); color: white; box-shadow: 0 8px 16px rgba(220,38,38,.2); }
+.sendButton:disabled { cursor: default; opacity: .42; box-shadow: none; }
+.toast { position: fixed; z-index: 70; right: 24px; bottom: 24px; display: flex; align-items: center; gap: 8px; border: 1px solid #fecaca; border-radius: 13px; padding: 11px 14px; background: white; box-shadow: var(--shadow-md); color: var(--red-700); font-size: 10px; font-weight: 800; animation: toast-in 180ms ease-out; }
+
+@keyframes typing { 0%,60%,100% { transform: translateY(0); opacity: .5; } 30% { transform: translateY(-3px); opacity: 1; } }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 950px) {
+  .chatShell { grid-template-columns: 300px minmax(0,1fr); }
+}
+
+@media (max-width: 700px) {
+  .chatShell { position: relative; min-height: 630px; height: calc(100vh - 210px); grid-template-columns: 1fr; }
+  .conversationPanel { border-right: 0; }
+  .conversationPanelHidden { display: none; }
+  .messagePanel { display: none; }
+  .messagePanelOpen { display: flex; }
+  .mobileBack { display: grid; }
+  .messageActions button:nth-child(-n+2) { display: none; }
+  .messages { padding-inline: 13px; }
+  .bubbleWrap { max-width: 82%; }
+  .composer { padding-inline: 9px; }
+  .composerTools button:nth-child(2) { display: none; }
+  .toast { right: 14px; bottom: 90px; left: 14px; justify-content: center; }
+}
