@@ -7,7 +7,7 @@ export type BadgeTone =
   | "cyan"
   | "slate";
 
-export type TaskStatus = "todo" | "in_progress" | "review" | "done";
+export type TaskStatus = "todo" | "in_progress" | "done";
 export type TaskPriority = "high" | "medium" | "low";
 
 export type Task = {

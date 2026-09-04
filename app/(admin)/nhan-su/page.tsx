@@ -26,12 +26,13 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { employees as mockEmployees } from "@/lib/mock-data";
+import { gatewayApi } from "@/lib/api/gateway";
+import { toEmployee, type ApiUser } from "@/lib/api/domain";
 import type { BadgeTone, Employee } from "@/lib/types";
 import styles from "./nhan-su.module.css";
 
@@ -39,9 +40,9 @@ type ModalMode = "view" | "manage";
 type StatusFilter = Employee["status"] | "all";
 
 const statusMeta: Record<Employee["status"], { label: string; tone: BadgeTone; helper: string }> = {
-  active: { label: "Đang làm việc", tone: "emerald", helper: "Hoạt động" },
-  offline: { label: "Ngoại tuyến", tone: "slate", helper: "Chưa check-in" },
-  leave: { label: "Đang nghỉ phép", tone: "amber", helper: "Tạm vắng" },
+  active: { label: "Tài khoản hiện có", tone: "emerald", helper: "Đã đồng bộ" },
+  offline: { label: "Chưa có trạng thái", tone: "slate", helper: "Chưa ghi nhận" },
+  leave: { label: "Đang nghỉ phép", tone: "amber", helper: "Theo lịch" },
 };
 
 const roleTone: Record<string, BadgeTone> = {
@@ -54,7 +55,7 @@ const roleTone: Record<string, BadgeTone> = {
 };
 
 const roleOptions = ["Quản trị viên", "Quản lý", "Bếp trưởng", "Thu ngân", "Phục vụ", "Nhân viên"];
-const shiftOptions = ["Hành chính", "Ca sáng", "Ca chiều", "Ca tối", "Linh hoạt"];
+const roleValues: Record<string, string> = { "Quản trị viên": "admin", "Quản lý": "manager", "Bếp trưởng": "chef", "Thu ngân": "cashier", "Phục vụ": "waiter", "Nhân viên": "user" };
 
 function normalizeSearch(value: string) {
   return value
@@ -65,14 +66,8 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
-function getInitials(name: string) {
-  const parts = name.trim().split(/\s+/).filter(Boolean);
-  if (parts.length === 0) return "NV";
-  return `${parts[Math.max(0, parts.length - 2)]?.[0] ?? ""}${parts[parts.length - 1]?.[0] ?? ""}`.toUpperCase();
-}
-
 export default function EmployeeDirectoryPage() {
-  const [directory, setDirectory] = useState<Employee[]>(() => mockEmployees.map((employee) => ({ ...employee })));
+  const [directory, setDirectory] = useState<Employee[]>([]);
   const [query, setQuery] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("Tất cả");
   const [roleFilter, setRoleFilter] = useState("Tất cả");
@@ -84,6 +79,16 @@ export default function EmployeeDirectoryPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+
+  const loadDirectory = useCallback(async () => {
+    try {
+      const result = await gatewayApi<{ users: ApiUser[] }>("user/user/all");
+      setDirectory((Array.isArray(result.users) ? result.users : []).map(toEmployee));
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể tải danh bạ nhân sự."); }
+  }, []);
+
+  useEffect(() => { void Promise.resolve().then(loadDirectory); }, [loadDirectory]);
 
   const departments = useMemo(() => ["Tất cả", ...Array.from(new Set(directory.map((employee) => employee.department)))], [directory]);
   const roles = useMemo(() => ["Tất cả", ...Array.from(new Set(directory.map((employee) => employee.role)))], [directory]);
@@ -104,7 +109,7 @@ export default function EmployeeDirectoryPage() {
 
   const filtersActive = Boolean(query || departmentFilter !== "Tất cả" || roleFilter !== "Tất cả" || statusFilter !== "all");
   const activeCount = directory.filter((employee) => employee.status === "active").length;
-  const leaveCount = directory.filter((employee) => employee.status === "leave").length;
+  const roleCount = new Set(directory.map((employee) => employee.role)).size;
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -137,21 +142,22 @@ export default function EmployeeDirectoryPage() {
 
   const openCreate = () => {
     setDraft({
-      id: `NV-${String(51 + directory.length).padStart(3, "0")}`,
+      id: "",
       name: "",
       email: "",
       phone: "",
       role: "Nhân viên",
-      department: "Vận hành",
+      department: "Chưa có phòng ban",
       status: "active",
-      joinedAt: "28/08/2026",
-      shift: "Hành chính",
+      joinedAt: "Chưa có dữ liệu",
+      shift: "Chưa có dữ liệu",
       initial: "NV",
       tone: "blue",
     });
     setModalMode("manage");
     setIsCreating(true);
     setFormError("");
+    setNewPassword("");
     setModalOpen(true);
   };
 
@@ -159,30 +165,27 @@ export default function EmployeeDirectoryPage() {
     setDraft((current) => (current ? { ...current, [key]: value } : current));
   };
 
-  const saveProfile = () => {
+  const saveProfile = async () => {
     if (!draft) return;
     if (!draft.name.trim() || !draft.email.trim()) {
       setFormError("Vui lòng nhập đầy đủ họ tên và email công việc.");
       return;
     }
 
-    const savedEmployee: Employee = {
-      ...draft,
-      name: draft.name.trim(),
-      email: draft.email.trim(),
-      initial: getInitials(draft.name),
-      tone: roleTone[draft.role] ?? draft.tone,
-    };
-
-    if (isCreating) {
-      setDirectory((current) => [...current, savedEmployee]);
-      setNotice(`Đã thêm ${savedEmployee.name} vào danh bạ nhân sự.`);
-    } else {
-      setDirectory((current) => current.map((employee) => (employee.id === savedEmployee.id ? savedEmployee : employee)));
-      setNotice(`Hồ sơ ${savedEmployee.name} đã được cập nhật.`);
-    }
-    setModalOpen(false);
-    setFormError("");
+    if (isCreating && newPassword.length < 6) { setFormError("Mật khẩu cần có ít nhất 6 ký tự."); return; }
+    try {
+      if (isCreating) {
+        const result = await gatewayApi<{ userId: string }>("auth/register", { method: "POST", json: { username: draft.name.trim(), email: draft.email.trim().toLowerCase(), password: newPassword } });
+        const role = roleValues[draft.role] ?? "user";
+        if (role !== "user") await gatewayApi(`auth/users/${encodeURIComponent(result.userId)}/role`, { method: "PATCH", json: { role } });
+        setNotice(`Đã tạo tài khoản cho ${draft.name.trim()}.`);
+      } else {
+        await gatewayApi(`auth/users/${encodeURIComponent(draft.id)}/role`, { method: "PATCH", json: { role: roleValues[draft.role] ?? "user" } });
+        setNotice(`Đã cập nhật vai trò của ${draft.name}.`);
+      }
+      await loadDirectory();
+      setModalOpen(false); setFormError("");
+    } catch (error) { setFormError(error instanceof Error ? error.message : "Không thể lưu tài khoản."); }
   };
 
   const toggleSelected = (id: string) => {
@@ -195,12 +198,6 @@ export default function EmployeeDirectoryPage() {
     setSelectedIds((current) => (allSelected ? current.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...current, ...visibleIds]))));
   };
 
-  const markSelectedActive = () => {
-    setDirectory((current) => current.map((employee) => (selectedIds.includes(employee.id) ? { ...employee, status: "active" } : employee)));
-    setNotice(`Đã chuyển ${selectedIds.length} hồ sơ sang trạng thái đang làm việc.`);
-    setSelectedIds([]);
-  };
-
   return (
     <div className={styles.page}>
       <PageHeader
@@ -209,7 +206,7 @@ export default function EmployeeDirectoryPage() {
         description="Tra cứu thông tin liên hệ, theo dõi trạng thái làm việc và quản lý vai trò truy cập của từng thành viên."
         actions={
           <>
-            <button className="button-secondary" type="button" onClick={() => setNotice("Danh sách nhân sự đã được chuẩn bị để xuất file.")}><Download size={16} /> Xuất danh sách</button>
+            <button className="button-secondary" type="button" onClick={() => void loadDirectory()}><Download size={16} /> Làm mới danh sách</button>
             <button className="button-primary" type="button" onClick={openCreate}><Plus size={16} /> Thêm nhân sự</button>
           </>
         }
@@ -220,10 +217,10 @@ export default function EmployeeDirectoryPage() {
       ) : null}
 
       <section className={styles.statsGrid} aria-label="Tổng quan nhân sự">
-        <StatCard label="Tổng nhân sự" value={directory.length} trend="2 người" helper="mới trong tháng" icon={<Users size={18} />} tone="red" />
-        <StatCard label="Đang làm việc" value={activeCount} helper={`${Math.round((activeCount / Math.max(directory.length, 1)) * 100)}% lực lượng`} icon={<UserCheck size={18} />} tone="emerald" />
-        <StatCard label="Đang nghỉ phép" value={leaveCount} helper="đã có lịch trở lại" icon={<UserRoundX size={18} />} tone="amber" />
-        <StatCard label="Phòng ban" value={departments.length - 1} helper="đang hoạt động" icon={<Building2 size={18} />} tone="violet" />
+        <StatCard label="Tổng nhân sự" value={directory.length} helper="từ NRApp Gateway" icon={<Users size={18} />} tone="red" />
+        <StatCard label="Tài khoản đã đồng bộ" value={activeCount} helper={`${Math.round((activeCount / Math.max(directory.length, 1)) * 100)}% danh bạ`} icon={<UserCheck size={18} />} tone="emerald" />
+        <StatCard label="Vai trò hệ thống" value={roleCount} helper="theo dữ liệu xác thực" icon={<UserRoundX size={18} />} tone="amber" />
+        <StatCard label="Nhóm dữ liệu" value={departments.length - 1} helper="backend chưa có phòng ban" icon={<Building2 size={18} />} tone="violet" />
       </section>
 
       <section className={`surface-card ${styles.directoryPanel}`}>
@@ -254,8 +251,8 @@ export default function EmployeeDirectoryPage() {
         <div className={styles.resultBar}>
           <span>Tìm thấy <strong>{filteredEmployees.length}</strong> nhân sự</span>
           {selectedIds.length > 0 ? (
-            <div className={styles.bulkActions}><strong>{selectedIds.length} đã chọn</strong><button type="button" onClick={markSelectedActive}><UserCheck size={13} /> Đánh dấu đang làm</button><button type="button" onClick={() => setSelectedIds([])}>Bỏ chọn</button></div>
-          ) : <span className={styles.resultHint}>Cập nhật gần nhất: 2 phút trước</span>}
+            <div className={styles.bulkActions}><strong>{selectedIds.length} đã chọn</strong><button type="button" onClick={() => setSelectedIds([])}>Bỏ chọn</button></div>
+          ) : <span className={styles.resultHint}>Nguồn: NRApp Gateway</span>}
         </div>
 
         <div className={styles.employeeTable}>
@@ -269,7 +266,7 @@ export default function EmployeeDirectoryPage() {
               <article className={styles.employeeRow} key={employee.id}>
                 <label className={styles.checkbox} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(employee.id)} onChange={() => toggleSelected(employee.id)} /><span /></label>
                 <button className={styles.employeeIdentity} type="button" onClick={() => openProfile(employee)}>
-                  <Avatar initials={employee.initial} tone={employee.tone} size="md" online={employee.status === "active"} />
+                  <Avatar initials={employee.initial} tone={employee.tone} size="md" />
                   <span><strong>{employee.name}</strong><small>{employee.id} · {employee.department}</small></span>
                 </button>
                 <div className={styles.contactCell}><span><Mail size={12} /> {employee.email}</span><small><Phone size={11} /> {employee.phone}</small></div>
@@ -293,7 +290,7 @@ export default function EmployeeDirectoryPage() {
             return (
               <article className={styles.employeeCard} key={employee.id}>
                 <div className={styles.cardTop}>
-                  <Avatar initials={employee.initial} tone={employee.tone} size="lg" online={employee.status === "active"} />
+                  <Avatar initials={employee.initial} tone={employee.tone} size="lg" />
                   <div><strong>{employee.name}</strong><span>{employee.id} · {employee.department}</span><div><Badge tone={roleTone[employee.role] ?? "slate"}>{employee.role}</Badge><Badge tone={status.tone} dot>{status.helper}</Badge></div></div>
                   <button type="button" onClick={(event) => { event.stopPropagation(); openProfile(employee, "manage"); }} aria-label={`Quản lý ${employee.name}`}><PencilLine size={15} /></button>
                 </div>
@@ -322,11 +319,11 @@ export default function EmployeeDirectoryPage() {
             {modalMode === "view" ? (
               <>
                 <div className={styles.profileHero}>
-                  <Avatar initials={draft.initial} tone={draft.tone} size="xl" online={draft.status === "active"} />
+                  <Avatar initials={draft.initial} tone={draft.tone} size="xl" />
                   <div><h3>{draft.name}</h3><p>{draft.role} · {draft.department}</p><Badge tone={statusMeta[draft.status].tone} dot>{statusMeta[draft.status].label}</Badge></div>
                 </div>
                 <div className={styles.profileBody}>
-                  <section><h4>Thông tin liên hệ</h4><div className={styles.infoGrid}><div><span><Mail size={14} /></span><p><small>Email công việc</small><strong>{draft.email}</strong></p></div><div><span><Phone size={14} /></span><p><small>Số điện thoại</small><strong>{draft.phone}</strong></p></div><div><span><MapPin size={14} /></span><p><small>Khu vực</small><strong>TP. Hồ Chí Minh</strong></p></div><div><span><Building2 size={14} /></span><p><small>Phòng ban</small><strong>{draft.department}</strong></p></div></div></section>
+                  <section><h4>Thông tin liên hệ</h4><div className={styles.infoGrid}><div><span><Mail size={14} /></span><p><small>Email công việc</small><strong>{draft.email}</strong></p></div><div><span><Phone size={14} /></span><p><small>Số điện thoại</small><strong>{draft.phone}</strong></p></div><div><span><MapPin size={14} /></span><p><small>Nguồn hồ sơ</small><strong>NRApp Gateway</strong></p></div><div><span><Building2 size={14} /></span><p><small>Phòng ban</small><strong>{draft.department}</strong></p></div></div></section>
                   <section><h4>Thông tin công việc</h4><div className={styles.workSummary}><div><small>Mã nhân sự</small><strong>{draft.id}</strong></div><div><small>Ngày gia nhập</small><strong>{draft.joinedAt}</strong></div><div><small>Ca làm mặc định</small><strong>{draft.shift}</strong></div><div><small>Vai trò hệ thống</small><strong>{draft.role}</strong></div></div></section>
                   <div className={styles.permissionNote}><ShieldCheck size={18} /><div><strong>Quyền truy cập đang hoạt động</strong><p>Vai trò {draft.role.toLowerCase()} quyết định các phân hệ thành viên có thể truy cập.</p></div></div>
                 </div>
@@ -338,20 +335,21 @@ export default function EmployeeDirectoryPage() {
                   <Avatar initials={draft.initial || "NV"} tone={draft.tone} size="lg" />
                   <div><strong>{isCreating ? "Tạo tài khoản nhân sự" : draft.name}</strong><p>{isCreating ? "Nhập thông tin để thêm thành viên vào hệ thống." : `${draft.id} · Chỉnh sửa thông tin và quyền truy cập.`}</p></div>
                 </div>
-                <form className={styles.manageForm} onSubmit={(event) => { event.preventDefault(); saveProfile(); }}>
+                <form className={styles.manageForm} onSubmit={(event) => { event.preventDefault(); void saveProfile(); }}>
                   <div className={styles.formGrid}>
-                    <label className={styles.fullField}><span className="form-label">Họ và tên *</span><input className="field" value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Nhập họ và tên" autoFocus /></label>
-                    <label><span className="form-label">Mã nhân sự</span><input className="field" value={draft.id} readOnly /></label>
-                    <label><span className="form-label">Email công việc *</span><input className="field" type="email" value={draft.email} onChange={(event) => updateDraft("email", event.target.value)} placeholder="ten@hdg.vn" /></label>
-                    <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} onChange={(event) => updateDraft("phone", event.target.value)} placeholder="090 000 0000" /></label>
-                    <label><span className="form-label">Phòng ban</span><input className="field" value={draft.department} onChange={(event) => updateDraft("department", event.target.value)} placeholder="Tên phòng ban" /></label>
+                    <label className={styles.fullField}><span className="form-label">Họ và tên *</span><input className="field" value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Nhập họ và tên" autoFocus disabled={!isCreating} /></label>
+                    <label><span className="form-label">Mã tài khoản</span><input className="field" value={draft.id || "Được tạo bởi Gateway"} readOnly /></label>
+                    <label><span className="form-label">Email công việc *</span><input className="field" type="email" value={draft.email} onChange={(event) => updateDraft("email", event.target.value)} placeholder="ten@hdg.vn" disabled={!isCreating} /></label>
+                    {isCreating ? <label><span className="form-label">Mật khẩu ban đầu *</span><input className="field" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" /></label> : null}
+                    <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} disabled /></label>
+                    <label><span className="form-label">Phòng ban</span><input className="field" value={draft.department} disabled /></label>
                     <label><span className="form-label">Vai trò hệ thống</span><select className="select-field" value={draft.role} onChange={(event) => updateDraft("role", event.target.value)}>{roleOptions.map((role) => <option key={role}>{role}</option>)}</select></label>
-                    <label><span className="form-label">Trạng thái</span><select className="select-field" value={draft.status} onChange={(event) => updateDraft("status", event.target.value as Employee["status"])}>{Object.entries(statusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}</select></label>
-                    <label><span className="form-label">Ca làm mặc định</span><select className="select-field" value={draft.shift} onChange={(event) => updateDraft("shift", event.target.value)}>{shiftOptions.map((shift) => <option key={shift}>{shift}</option>)}</select></label>
-                    <label><span className="form-label">Ngày gia nhập</span><input className="field" value={draft.joinedAt} onChange={(event) => updateDraft("joinedAt", event.target.value)} /></label>
+                    <label><span className="form-label">Trạng thái</span><input className="field" value="Tài khoản đang tồn tại" disabled /></label>
+                    <label><span className="form-label">Ca làm mặc định</span><input className="field" value={draft.shift} disabled /></label>
+                    <label><span className="form-label">Ngày gia nhập</span><input className="field" value={draft.joinedAt} disabled /></label>
                   </div>
                   {formError ? <p className={styles.formError}>{formError}</p> : null}
-                  <div className={styles.securityHint}><BriefcaseBusiness size={17} /><p><strong>Lưu ý phân quyền</strong><span>Thay đổi vai trò sẽ áp dụng ngay cho tài khoản trong bản giao diện hiện tại.</span></p></div>
+                  <div className={styles.securityHint}><BriefcaseBusiness size={17} /><p><strong>Lưu ý phân quyền</strong><span>Backend hiện chỉ cho quản trị viên đổi vai trò; các trường hồ sơ mở rộng chưa có API cập nhật.</span></p></div>
                   <footer className={styles.modalFooter}><button className="button-secondary" type="button" onClick={() => isCreating ? setModalOpen(false) : setModalMode("view")}>{isCreating ? "Hủy" : "Quay lại"}</button><button className="button-primary" type="submit"><Save size={15} /> {isCreating ? "Thêm nhân sự" : "Lưu thay đổi"}</button></footer>
                 </form>
               </>

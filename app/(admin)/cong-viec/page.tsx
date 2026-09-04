@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
   ArrowRight,
@@ -28,7 +28,9 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { employees, tasks as initialTasks } from "@/lib/mock-data";
+import { gatewayApi } from "@/lib/api/gateway";
+import { toEmployee, toTask, type ApiTaskPage, type ApiUser } from "@/lib/api/domain";
+import type { Employee } from "@/lib/types";
 import type { BadgeTone, Task, TaskPriority, TaskStatus } from "@/lib/types";
 import styles from "./cong-viec.module.css";
 
@@ -37,7 +39,6 @@ type StatusFilter = "all" | TaskStatus;
 const statusMeta: Record<TaskStatus, { label: string; tone: BadgeTone; progress: number }> = {
   todo: { label: "Cần làm", tone: "slate", progress: 0 },
   in_progress: { label: "Đang thực hiện", tone: "blue", progress: 55 },
-  review: { label: "Chờ duyệt", tone: "amber", progress: 90 },
   done: { label: "Hoàn tất", tone: "emerald", progress: 100 },
 };
 
@@ -51,31 +52,25 @@ const statusTabs: { key: StatusFilter; label: string }[] = [
   { key: "all", label: "Tất cả" },
   { key: "todo", label: "Cần làm" },
   { key: "in_progress", label: "Đang làm" },
-  { key: "review", label: "Chờ duyệt" },
   { key: "done", label: "Hoàn tất" },
 ];
 
 const emptyForm = {
   title: "",
   description: "",
-  assigneeId: "NV-014",
-  department: "Vận hành",
-  due: "2026-09-02T17:30",
+  assigneeId: "",
+  department: "NRApp",
+  due: "",
   priority: "medium" as TaskPriority,
 };
-
-function formatDue(value: string) {
-  const [date, time] = value.split("T");
-  const [year, month, day] = date.split("-");
-  return `${day}/${month}/${year} · ${time}`;
-}
 
 function taskTone(index: number): BadgeTone {
   return (["violet", "blue", "amber", "cyan", "red"] as BadgeTone[])[index % 5];
 }
 
 export default function TasksPage() {
-  const [taskItems, setTaskItems] = useState<Task[]>(initialTasks);
+  const [taskItems, setTaskItems] = useState<Task[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [department, setDepartment] = useState("all");
@@ -84,6 +79,23 @@ export default function TasksPage() {
   const [form, setForm] = useState(emptyForm);
   const [formError, setFormError] = useState("");
   const [notice, setNotice] = useState("");
+
+  const loadTasks = useCallback(async () => {
+    try {
+      const [taskResult, userResult] = await Promise.all([
+        gatewayApi<ApiTaskPage>("todo?limit=100"),
+        gatewayApi<{ users: ApiUser[] }>("user/user/all"),
+      ]);
+      setTaskItems((Array.isArray(taskResult.tasks) ? taskResult.tasks : []).map(toTask).filter((task): task is Task => task !== null));
+      const nextEmployees = (Array.isArray(userResult.users) ? userResult.users : []).map(toEmployee);
+      setEmployees(nextEmployees);
+      setForm((current) => current.assigneeId || !nextEmployees[0] ? current : { ...current, assigneeId: nextEmployees[0].id, department: nextEmployees[0].department });
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : "Không thể tải dữ liệu công việc.");
+    }
+  }, []);
+
+  useEffect(() => { void Promise.resolve().then(loadTasks); }, [loadTasks]);
 
   useEffect(() => {
     if (!modalOpen) return;
@@ -102,7 +114,6 @@ export default function TasksPage() {
     all: taskItems.length,
     todo: taskItems.filter((task) => task.status === "todo").length,
     in_progress: taskItems.filter((task) => task.status === "in_progress").length,
-    review: taskItems.filter((task) => task.status === "review").length,
     done: taskItems.filter((task) => task.status === "done").length,
   }), [taskItems]);
 
@@ -120,15 +131,24 @@ export default function TasksPage() {
   const completed = counts.done;
   const averageProgress = Math.round(taskItems.reduce((total, task) => total + task.progress, 0) / Math.max(taskItems.length, 1));
   const departments = Array.from(new Set(taskItems.map((task) => task.department)));
+  const assigneeWorkload = Array.from(taskItems.reduce((map, task) => {
+    if (task.status !== "done") map.set(task.assignee, (map.get(task.assignee) ?? 0) + 1);
+    return map;
+  }, new Map<string, number>()).entries()).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const maxWorkload = Math.max(...assigneeWorkload.map(([, count]) => count), 1);
+  const upcomingTasks = taskItems.filter((task) => task.status !== "done").slice(0, 2);
 
   const showNotice = (message: string) => {
     setNotice(message);
     window.setTimeout(() => setNotice(""), 2600);
   };
 
-  const updateStatus = (id: string, status: TaskStatus) => {
-    setTaskItems((current) => current.map((task) => task.id === id ? { ...task, status, progress: statusMeta[status].progress } : task));
-    showNotice(`Đã chuyển công việc sang “${statusMeta[status].label}”.`);
+  const updateStatus = async (id: string, status: TaskStatus) => {
+    try {
+      await gatewayApi(`todo/${encodeURIComponent(id)}/status`, { method: "PATCH", json: { status } });
+      setTaskItems((current) => current.map((task) => task.id === id ? { ...task, status, progress: statusMeta[status].progress } : task));
+      showNotice(`Đã chuyển công việc sang “${statusMeta[status].label}”.`);
+    } catch (error) { showNotice(error instanceof Error ? error.message : "Không thể cập nhật trạng thái."); }
   };
 
   const resetFilters = () => {
@@ -138,33 +158,21 @@ export default function TasksPage() {
     setActiveStatus("all");
   };
 
-  const createTask = (event: FormEvent<HTMLFormElement>) => {
+  const createTask = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (form.title.trim().length < 4) {
       setFormError("Tên công việc cần có ít nhất 4 ký tự.");
       return;
     }
     const assignee = employees.find((employee) => employee.id === form.assigneeId) ?? employees[0];
-    const numericIds = taskItems.map((task) => Number(task.id.replace("CV-", ""))).filter(Number.isFinite);
-    const nextId = Math.max(1082, ...numericIds) + 1;
-    const newTask: Task = {
-      id: `CV-${nextId}`,
-      title: form.title.trim(),
-      description: form.description.trim() || "Chưa có mô tả chi tiết.",
-      assignee: assignee.name,
-      assigneeInitial: assignee.initial,
-      department: form.department,
-      due: formatDue(form.due),
-      status: "todo",
-      priority: form.priority,
-      progress: 0,
-    };
-    setTaskItems((current) => [newTask, ...current]);
-    setForm(emptyForm);
-    setFormError("");
-    setModalOpen(false);
-    setActiveStatus("all");
-    showNotice(`Đã tạo ${newTask.id} và giao cho ${newTask.assignee}.`);
+    if (!assignee) { setFormError("Vui lòng chọn người phụ trách."); return; }
+    try {
+      await gatewayApi("todo", { method: "POST", json: { title: form.title.trim(), description: form.description.trim() || undefined, assignedTo: assignee.id, priority: form.priority, deadline: form.due ? new Date(form.due).toISOString() : undefined } });
+      setForm({ ...emptyForm, assigneeId: employees[0]?.id ?? "" });
+      setFormError(""); setModalOpen(false); setActiveStatus("all");
+      await loadTasks();
+      showNotice(`Đã tạo công việc và giao cho ${assignee.name}.`);
+    } catch (error) { setFormError(error instanceof Error ? error.message : "Không thể tạo công việc."); }
   };
 
   return (
@@ -177,17 +185,17 @@ export default function TasksPage() {
         description="Giao việc, theo dõi tiến độ và tháo gỡ điểm nghẽn cho toàn bộ đội ngũ."
         actions={
           <>
-            <button className="button-secondary" onClick={() => showNotice("Bảng công việc đã được xuất thành báo cáo.")}><Download size={16} /> Xuất dữ liệu</button>
+            <button className="button-secondary" onClick={() => void loadTasks()}><Download size={16} /> Làm mới dữ liệu</button>
             <button className="button-primary" onClick={() => setModalOpen(true)}><Plus size={17} /> Tạo công việc</button>
           </>
         }
       />
 
       <section className={styles.statsGrid} aria-label="Tổng quan công việc">
-        <StatCard label="Tổng công việc" value={taskItems.length} helper="trong chu kỳ hiện tại" trend="+2 tuần này" icon={<ClipboardCheck size={18} />} tone="red" />
+        <StatCard label="Tổng công việc" value={taskItems.length} helper="theo dữ liệu máy chủ" icon={<ClipboardCheck size={18} />} tone="red" />
         <StatCard label="Đang thực hiện" value={counts.in_progress} helper="đang được cập nhật" icon={<CircleDashed size={18} />} tone="blue" />
-        <StatCard label="Chờ phê duyệt" value={counts.review} helper="cần quản lý phản hồi" icon={<TimerReset size={18} />} tone="amber" />
-        <StatCard label="Đã hoàn thành" value={completed} helper={`${averageProgress}% tiến độ trung bình`} trend="+12%" icon={<CheckCircle2 size={18} />} tone="emerald" />
+        <StatCard label="Cần thực hiện" value={counts.todo} helper="chưa bắt đầu" icon={<TimerReset size={18} />} tone="amber" />
+        <StatCard label="Đã hoàn thành" value={completed} helper={`${averageProgress}% tiến độ trung bình`} icon={<CheckCircle2 size={18} />} tone="emerald" />
       </section>
 
       <section className={styles.commandBar}>
@@ -271,7 +279,7 @@ export default function TasksPage() {
                   </div>
                   <label className={`${styles.statusSelect} ${styles[`status_${status.tone}`]}`}>
                     <span className={styles.statusDot} />
-                    <select value={task.status} onChange={(event) => updateStatus(task.id, event.target.value as TaskStatus)} aria-label={`Trạng thái ${task.title}`}>
+                    <select value={task.status} onChange={(event) => void updateStatus(task.id, event.target.value as TaskStatus)} aria-label={`Trạng thái ${task.title}`}>
                       {Object.entries(statusMeta).map(([value, meta]) => <option key={value} value={value}>{meta.label}</option>)}
                     </select>
                     <ChevronDown size={13} />
@@ -295,14 +303,14 @@ export default function TasksPage() {
           <section className={styles.focusCard}>
             <div className={styles.focusTop}>
               <span><Target size={19} /></span>
-              <Badge tone="red">Tuần 35</Badge>
+              <Badge tone="red">Hiện tại</Badge>
             </div>
             <p className={styles.darkKicker}>Nhịp độ đội ngũ</p>
             <h2>Tiến độ đang đúng kế hoạch</h2>
-            <p>{completed} công việc đã hoàn thành. Tập trung xử lý các mục chờ duyệt để giữ nhịp tuần.</p>
+            <p>{completed} công việc đã hoàn thành. Tập trung xử lý các mục đang mở để giữ nhịp tuần.</p>
             <div className={styles.focusScore}><strong>{averageProgress}%</strong><span>tiến độ chung</span></div>
             <div className={styles.focusProgress}><span style={{ width: `${averageProgress}%` }} /></div>
-            <button onClick={() => setActiveStatus("review")}>Xem việc chờ duyệt <ArrowRight size={15} /></button>
+            <button onClick={() => setActiveStatus("in_progress")}>Xem việc đang làm <ArrowRight size={15} /></button>
           </section>
 
           <section className={`${styles.workloadCard} surface-card`}>
@@ -311,28 +319,24 @@ export default function TasksPage() {
               <BarChart3 size={18} />
             </div>
             <div className={styles.workloadList}>
-              {[
-                ["Căn tin", 86, "3 việc"],
-                ["Vận hành", 68, "2 việc"],
-                ["Nhân sự", 52, "1 việc"],
-                ["Kỹ thuật", 38, "1 việc"],
-              ].map(([label, value, count]) => (
+              {assigneeWorkload.map(([label, count]) => (
                 <div className={styles.workloadItem} key={label}>
-                  <div><strong>{label}</strong><span>{count}</span></div>
-                  <div><span style={{ width: `${value}%` }} /></div>
+                  <div><strong>{label}</strong><span>{count} việc</span></div>
+                  <div><span style={{ width: `${Math.round((count / maxWorkload) * 100)}%` }} /></div>
                 </div>
               ))}
+              {!assigneeWorkload.length ? <p>Chưa có công việc đang mở.</p> : null}
             </div>
           </section>
 
           <section className={`${styles.deadlineCard} surface-card`}>
             <div className={styles.sideHeading}>
-              <div><p className={styles.kicker}>48 giờ tới</p><h2>Mốc cần chú ý</h2></div>
+              <div><p className={styles.kicker}>Dữ liệu hiện tại</p><h2>Mốc cần chú ý</h2></div>
               <AlertCircle size={18} />
             </div>
             <div className={styles.deadlineList}>
-              <div><span className={styles.dateTile}><strong>28</strong><small>T8</small></span><p><strong>Báo cáo vận hành</strong><small>Hôm nay · 17:30</small></p><Badge tone="red">Gấp</Badge></div>
-              <div><span className={styles.dateTile}><strong>29</strong><small>T8</small></span><p><strong>Kiểm kê nguyên liệu</strong><small>Ngày mai · 20:00</small></p><Badge tone="amber">Cao</Badge></div>
+              {upcomingTasks.map((task) => <div key={task.id}><span className={styles.dateTile}><CalendarClock size={18} /></span><p><strong>{task.title}</strong><small>{task.due}</small></p><Badge tone={priorityMeta[task.priority].tone}>{priorityMeta[task.priority].label}</Badge></div>)}
+              {!upcomingTasks.length ? <p>Không có công việc đang mở.</p> : null}
             </div>
           </section>
         </aside>
@@ -346,7 +350,7 @@ export default function TasksPage() {
               <div><p className={styles.kicker}>Phân công nhanh</p><h2 id="create-task-title">Tạo công việc mới</h2><p>Thêm đầu việc và chỉ định người phụ trách.</p></div>
               <button onClick={() => setModalOpen(false)} aria-label="Đóng"><X size={18} /></button>
             </div>
-            <form onSubmit={createTask}>
+            <form onSubmit={(event) => void createTask(event)}>
               <div className={styles.modalBody}>
                 <label className={styles.fullField}>
                   <span className="form-label">Tên công việc <em>*</em></span>

@@ -1,30 +1,39 @@
 # NRApp Admin Web
 
-Dự án admin web độc lập xây dựng bằng Next.js 16, React 19 và TypeScript. Giao diện kế thừa nhận diện của khu vực quản trị trong `Nrapp` (tông đỏ, nền slate, card bo lớn), sau đó được tổ chức lại theo trải nghiệm dashboard desktop và responsive mobile.
-
-Mã nguồn này không import, liên kết hay ghi vào dự án `Nrapp`. Hai asset nhận diện cần dùng đã được sao chép vào `public/images`.
+Cổng quản trị độc lập xây dựng bằng Next.js 16, React 19 và TypeScript. Ứng dụng dùng NRApp Gateway làm nguồn dữ liệu thật và không còn phụ thuộc vào dữ liệu tĩnh cục bộ.
 
 ## Khởi chạy
 
 Yêu cầu Node.js 20.9 trở lên.
 
 ```bash
+cp .env.example .env.local
 npm install
 npm run dev
 ```
 
-Mở [http://localhost:3000](http://localhost:3000). Trang đăng nhập demo nằm tại [http://localhost:3000/dang-nhap](http://localhost:3000/dang-nhap); tài khoản mẫu đã được điền sẵn.
+Mở [http://localhost:3000](http://localhost:3000) và đăng nhập bằng tài khoản NRApp có vai trò `admin`. Giới hạn này bảo đảm mọi khu vực quản trị đều khớp quyền của các endpoint backend. Luồng đăng nhập gồm email/mật khẩu và OTP gửi qua email.
 
-## Các khu vực giao diện
+Mặc định BFF kết nối tới `https://api.thanhlelmtp2006.id.vn/api`. Có thể đổi bằng biến môi trường `NRAPP_API_URL`; tài liệu endpoint nằm tại [NRApp Swagger](https://api.thanhlelmtp2006.id.vn/api-docs).
 
-- `/dashboard`: bảng điều hành, KPI, biểu đồ chấm công, yêu cầu cần duyệt.
-- `/lich-lam`: lịch làm, duyệt đơn, QR chấm công, chính sách và báo cáo.
-- `/cong-viec`: tìm kiếm/lọc, cập nhật tiến độ và tạo công việc mới.
+## Kiến trúc tích hợp
+
+- Trình duyệt chỉ gọi các route cùng origin trong `app/api`; access token và refresh token nằm trong cookie `HttpOnly`.
+- BFF tự làm mới access token khi Gateway trả về `401` và không đưa token vào JavaScript phía client.
+- Gateway proxy chỉ cho phép các nhóm API NRApp đã khai báo: auth, user, todo, workschedule, canteen, payment và chat.
+- Dashboard, lịch/chấm công, công việc, nhân sự, căn tin, chat, tiện ích và hồ sơ đều đọc hoặc ghi qua API thật.
+- Những khả năng backend chưa có endpoint tương ứng (đổi mật khẩu, tải avatar, gọi thoại/video, upload ảnh chat từ BFF JSON) được vô hiệu hóa và ghi chú rõ trên giao diện.
+
+## Các route chính
+
+- `/dashboard`: KPI và hoạt động tổng hợp từ các API nghiệp vụ.
+- `/lich-lam`: duyệt lịch, duyệt đơn từ, tạo token QR và báo cáo chấm công.
+- `/cong-viec`: đọc, tạo và cập nhật trạng thái công việc.
 - `/can-tin`: đơn hàng, bếp, thực đơn, kho và thống kê.
-- `/nhan-su`: danh bạ, lọc nhân sự, xem/chỉnh sửa/thêm hồ sơ.
-- `/tro-chuyen`: danh sách hội thoại và gửi tin nhắn cục bộ.
-- `/tien-ich`: trung tâm công cụ và trạng thái hệ thống.
-- `/ho-so`: hồ sơ, bảo mật, phiên đăng nhập và tùy chọn thông báo.
+- `/nhan-su`: danh bạ, tạo tài khoản và cập nhật vai trò.
+- `/tro-chuyen`: tải hội thoại, đọc và gửi tin nhắn văn bản.
+- `/tien-ich`: số liệu tổng hợp và trạng thái phản hồi của các API chính.
+- `/ho-so`: cập nhật tên/email, đăng xuất và xóa tài khoản.
 
 ## Kiểm tra chất lượng
 
@@ -33,7 +42,3 @@ npm run lint
 npm run typecheck
 npm run build
 ```
-
-## Dữ liệu và tích hợp
-
-Dữ liệu hiện tại nằm trong `lib/mock-data.ts` và các thao tác cập nhật state cục bộ để có thể xem, lọc, tạo và thử luồng giao diện mà không cần backend. Khi tích hợp thật, có thể thay lớp mock bằng API Gateway của hệ thống hiện có và bổ sung auth guard/session ở layout quản trị.

@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowRight,
@@ -9,7 +11,6 @@ import {
   Clock3,
   MessageSquareText,
   Sparkles,
-  TrendingUp,
   UserRoundPlus,
   UsersRound,
   UtensilsCrossed,
@@ -19,13 +20,11 @@ import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatCard } from "@/components/ui/stat-card";
-import {
-  canteenOrders,
-  employees,
-  scheduleRequests,
-  tasks,
-  weeklyAttendance,
-} from "@/lib/mock-data";
+import { useCallback, useEffect, useState } from "react";
+import { useAuthSession } from "@/components/providers/auth-session-provider";
+import { gatewayApi } from "@/lib/api/gateway";
+import { toCanteenOrder, toEmployee, toScheduleRequest, toTask, unwrapData, type ApiAttendance, type ApiOrderPage, type ApiScheduleRequest, type ApiTaskPage, type ApiUser } from "@/lib/api/domain";
+import type { CanteenOrder, Employee, ScheduleRequest, Task } from "@/lib/types";
 import type { BadgeTone } from "@/lib/types";
 import styles from "./dashboard.module.css";
 
@@ -71,10 +70,44 @@ const quickTools: {
 const requestTones: BadgeTone[] = ["red", "violet", "cyan"];
 
 export default function DashboardPage() {
+  const { user } = useAuthSession();
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [scheduleRequests, setScheduleRequests] = useState<ScheduleRequest[]>([]);
+  const [canteenOrders, setCanteenOrders] = useState<CanteenOrder[]>([]);
+  const [attendance, setAttendance] = useState<ApiAttendance[]>([]);
+
+  const loadDashboard = useCallback(async () => {
+    try {
+      const [usersResult, tasksResult, schedulesResult, ordersResult, attendanceResult] = await Promise.all([
+        gatewayApi<{ users: ApiUser[] }>("user/user/all"),
+        gatewayApi<ApiTaskPage>("todo?limit=100"),
+        gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/pending"),
+        gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
+        gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>("workschedule/attendance/report"),
+      ]);
+      setEmployees((usersResult.users ?? []).map(toEmployee));
+      setTasks((tasksResult.tasks ?? []).map(toTask).filter((task): task is Task => task !== null));
+      setScheduleRequests(unwrapData(schedulesResult).map(toScheduleRequest));
+      setCanteenOrders((ordersResult.orders ?? []).map(toCanteenOrder).filter((order): order is CanteenOrder => order !== null));
+      setAttendance(unwrapData(attendanceResult));
+    } catch {
+      setEmployees([]); setTasks([]); setScheduleRequests([]); setCanteenOrders([]); setAttendance([]);
+    }
+  }, []);
+
+  useEffect(() => { void Promise.resolve().then(loadDashboard); }, [loadDashboard]);
+
   const activeEmployees = employees.filter((employee) => employee.status === "active").length;
   const openTasks = tasks.filter((task) => task.status !== "done").length;
   const pendingRequests = scheduleRequests.filter((request) => request.status === "pending");
   const activeOrders = canteenOrders.filter((order) => order.status !== "completed").length;
+  const weeklyAttendance = dayLabels.map((_, index) => {
+    const date = new Date(); date.setHours(0, 0, 0, 0); date.setDate(date.getDate() - 6 + index);
+    const iso = date.toISOString().slice(0, 10);
+    const present = new Set(attendance.filter((item) => item.date.slice(0, 10) === iso && item.check_in_at).map((item) => item.employee_id)).size;
+    return Math.round((present / Math.max(employees.length, 1)) * 100);
+  });
   const attendanceAverage = Math.round(
     weeklyAttendance.reduce((total, value) => total + value, 0) / weeklyAttendance.length,
   );
@@ -82,13 +115,16 @@ export default function DashboardPage() {
     .map((value, index) => `${index * 100},${118 - value}`)
     .join(" ");
   const chartArea = `0,112 ${chartPoints} 600,112`;
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const checkedInToday = new Set(attendance.filter((item) => item.date.slice(0, 10) === todayIso && item.check_in_at).map((item) => item.employee_id)).size;
+  const greeting = new Date().getHours() < 12 ? "Chào buổi sáng" : new Date().getHours() < 18 ? "Chào buổi chiều" : "Chào buổi tối";
 
   const kpis = [
     {
       label: "Hồ sơ nhân sự",
       value: employees.length.toString().padStart(2, "0"),
-      helper: `${activeEmployees} đang hoạt động`,
-      trend: "+2 tháng này",
+      helper: `${activeEmployees} tài khoản hiện có`,
+      trend: "Đồng bộ trực tiếp",
       icon: UsersRound,
       tone: "red" as const,
     },
@@ -96,7 +132,7 @@ export default function DashboardPage() {
       label: "Công việc đang mở",
       value: openTasks.toString().padStart(2, "0"),
       helper: "trên toàn bộ phận",
-      trend: "68% đúng tiến độ",
+      trend: `${tasks.filter((task) => task.status === "done").length} đã hoàn thành`,
       icon: ClipboardCheck,
       tone: "blue" as const,
     },
@@ -112,36 +148,36 @@ export default function DashboardPage() {
     {
       label: "Đơn căn tin mở",
       value: activeOrders.toString().padStart(2, "0"),
-      helper: `${canteenOrders.length} đơn hôm nay`,
-      trend: "+12%",
+      helper: `${canteenOrders.length} đơn được trả về`,
+      trend: "Dữ liệu hiện tại",
       icon: UtensilsCrossed,
       tone: "emerald" as const,
     },
   ];
 
   const recentActivity = [
-    {
+    tasks[0] ? {
       title: "Cập nhật tiến độ công việc",
       detail: `${tasks[0].assignee} · ${tasks[0].id}`,
-      time: "8 phút trước",
+      time: tasks[0].due,
       icon: ClipboardCheck,
       tone: "red",
-    },
-    {
+    } : null,
+    scheduleRequests[0] ? {
       title: "Gửi yêu cầu lịch làm mới",
       detail: `${scheduleRequests[0].employee} · ${scheduleRequests[0].id}`,
       time: scheduleRequests[0].submittedAt,
       icon: CalendarDays,
       tone: "blue",
-    },
-    {
+    } : null,
+    canteenOrders[0] ? {
       title: "Ghi nhận đơn căn tin",
       detail: `${canteenOrders[0].customer} · ${canteenOrders[0].code}`,
-      time: "18 phút trước",
+      time: canteenOrders[0].createdAt,
       icon: UtensilsCrossed,
       tone: "amber",
-    },
-  ];
+    } : null,
+  ].filter((item): item is NonNullable<typeof item> => item !== null);
 
   return (
     <div className={styles.page}>
@@ -150,15 +186,14 @@ export default function DashboardPage() {
           <span className={styles.heroBadge}>
             <span className={styles.heroBadgeDot} /> Trung tâm vận hành trực tuyến
           </span>
-          <p className={styles.heroEyebrow}>Thứ Sáu, 28 tháng 8</p>
+          <p className={styles.heroEyebrow}>{new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</p>
           <h1>
-            Chào buổi sáng,
+            {greeting},
             <br />
-            <span>Minh Anh.</span>
+            <span>{user?.name ?? "Quản trị viên"}.</span>
           </h1>
           <p className={styles.heroDescription}>
-            Mọi hoạt động đang đúng nhịp. Bạn có 3 yêu cầu lịch làm cần duyệt trước
-            14:00 hôm nay.
+            Dữ liệu được đồng bộ từ NRApp Gateway. Bạn có {pendingRequests.length} yêu cầu lịch làm đang chờ duyệt.
           </p>
           <div className={styles.heroActions}>
             <Link href="/lich-lam" className={styles.heroPrimaryAction}>
@@ -177,24 +212,24 @@ export default function DashboardPage() {
             </span>
             <div>
               <small>NHỊP VẬN HÀNH</small>
-              <strong>Ổn định</strong>
+              <strong>{attendanceAverage >= 80 ? "Ổn định" : "Cần theo dõi"}</strong>
             </div>
             <Badge tone="emerald" dot>
-              Tốt
+              {attendanceAverage >= 80 ? "Tốt" : "Theo dõi"}
             </Badge>
           </div>
           <div className={styles.snapshotScore}>
-            <strong>94%</strong>
-            <span>hiệu suất hôm nay</span>
+            <strong>{attendanceAverage}%</strong>
+            <span>hiện diện 7 ngày</span>
           </div>
           <div className={styles.snapshotTrack}>
-            <span />
+            <span style={{ width: `${attendanceAverage}%` }} />
           </div>
           <div className={styles.snapshotMeta}>
             <span>
-              <CheckCircle2 size={14} /> 126 đã check-in
+              <CheckCircle2 size={14} /> {checkedInToday} đã check-in hôm nay
             </span>
-            <span>7 chưa ghi nhận</span>
+            <span>{Math.max(employees.length - checkedInToday, 0)} chưa ghi nhận</span>
           </div>
         </div>
       </section>
@@ -231,9 +266,7 @@ export default function DashboardPage() {
               <strong>{attendanceAverage}%</strong>
               <span>trung bình tuần</span>
             </div>
-            <span className={styles.chartTrend}>
-              <TrendingUp size={14} /> +4,2% so với tuần trước
-            </span>
+            <span className={styles.chartTrend}>Dữ liệu NRApp Gateway</span>
           </div>
 
           <div className={styles.chartFrame}>
@@ -292,7 +325,7 @@ export default function DashboardPage() {
             <span>
               <i className={styles.legendMuted} /> Cuối tuần
             </span>
-            <small>Cập nhật lúc 11:45</small>
+            <small>Cập nhật {new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date())}</small>
           </div>
         </article>
 

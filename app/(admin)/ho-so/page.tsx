@@ -3,7 +3,6 @@
 import {
   Bell,
   BriefcaseBusiness,
-  CalendarDays,
   Check,
   CheckCircle2,
   Edit3,
@@ -12,19 +11,21 @@ import {
   LockKeyhole,
   LogOut,
   Mail,
-  MapPin,
   Phone,
   Save,
   ShieldCheck,
-  Smartphone,
   Trash2,
   UserRound,
   X,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
+import { useAuthSession } from "@/components/providers/auth-session-provider";
+import { gatewayApi } from "@/lib/api/gateway";
+import { getRoleLabel } from "@/lib/auth/session-user";
 import styles from "./ho-so.module.css";
 
 type Profile = {
@@ -35,14 +36,6 @@ type Profile = {
   position: string;
 };
 
-const initialProfile: Profile = {
-  name: "Nguyễn Minh Anh",
-  email: "minhanh@hdg.vn",
-  phone: "090 123 4567",
-  department: "Ban điều hành",
-  position: "Quản trị viên hệ thống",
-};
-
 const notificationOptions = [
   { id: "schedule", title: "Lịch làm & chấm công", description: "Yêu cầu lịch mới, check-in muộn và báo cáo ngày." },
   { id: "tasks", title: "Công việc được cập nhật", description: "Thay đổi trạng thái, bình luận và việc sắp đến hạn." },
@@ -51,13 +44,20 @@ const notificationOptions = [
 ];
 
 export default function ProfilePage() {
+  const router = useRouter();
+  const { user, logout, refreshSession } = useAuthSession();
+  const initialProfile: Profile = {
+    name: user?.name ?? "Người dùng",
+    email: user?.email ?? "",
+    phone: "Backend chưa cung cấp",
+    department: "NRApp",
+    position: getRoleLabel(user?.role),
+  };
   const [tab, setTab] = useState<"profile" | "security" | "notifications">("profile");
   const [profile, setProfile] = useState(initialProfile);
   const [draft, setDraft] = useState(initialProfile);
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [twoFactor, setTwoFactor] = useState(true);
-  const [androidSessionActive, setAndroidSessionActive] = useState(true);
   const [enabledNotifications, setEnabledNotifications] = useState(() => new Set(notificationOptions.map((item) => item.id)));
   const [toast, setToast] = useState("");
   const editDialogRef = useRef<HTMLFormElement>(null);
@@ -120,12 +120,37 @@ export default function ProfilePage() {
     setEditing(true);
   };
 
-  const saveProfile = (event: FormEvent) => {
+  const saveProfile = async (event: FormEvent) => {
     event.preventDefault();
     if (!draft.name.trim() || !draft.email.trim()) return;
-    setProfile({ ...draft, name: draft.name.trim(), email: draft.email.trim() });
-    setEditing(false);
-    notify("Thông tin tài khoản đã được cập nhật");
+    try {
+      const name = draft.name.trim();
+      const email = draft.email.trim().toLowerCase();
+      if (name !== profile.name) await gatewayApi("user/update/user", { method: "POST", json: { username: name } });
+      if (email !== profile.email) await gatewayApi("auth/me/email", { method: "PATCH", json: { email } });
+      setProfile({ ...draft, name, email });
+      setEditing(false);
+      await refreshSession();
+      notify("Thông tin tài khoản đã được cập nhật trên máy chủ");
+    } catch (error) {
+      notify(error instanceof Error ? error.message : "Không thể cập nhật hồ sơ.");
+    }
+  };
+
+  const handleLogout = async () => {
+    await logout();
+    router.replace("/dang-nhap");
+    router.refresh();
+  };
+
+  const deleteAccount = async () => {
+    try {
+      await gatewayApi("auth/me", { method: "DELETE" });
+      await handleLogout();
+    } catch (error) {
+      setDeleteOpen(false);
+      notify(error instanceof Error ? error.message : "Không thể xóa tài khoản.");
+    }
   };
 
   const toggleNotification = (id: string) => {
@@ -176,7 +201,7 @@ export default function ProfilePage() {
             <h2>{profile.name}</h2>
             <div className={styles.heroMeta}>
               <span><BriefcaseBusiness size={13} /> {profile.position}</span>
-              <span><MapPin size={13} /> Hồ Chí Minh</span>
+              <span><ShieldCheck size={13} /> Mã {user?.id ?? "—"}</span>
             </div>
           </div>
         </div>
@@ -206,27 +231,27 @@ export default function ProfilePage() {
                 <p>Hồ sơ tài khoản</p>
                 <h3>Thông tin cơ bản</h3>
               </div>
-              <Badge tone="red">Quản trị viên</Badge>
+              <Badge tone="red">{getRoleLabel(user?.role)}</Badge>
             </div>
             <div className={styles.infoList}>
               <InfoRow icon={<UserRound size={17} />} label="Họ và tên" value={profile.name} />
               <InfoRow icon={<Mail size={17} />} label="Địa chỉ email" value={profile.email} verified />
               <InfoRow icon={<Phone size={17} />} label="Số điện thoại" value={profile.phone} />
-              <InfoRow icon={<BriefcaseBusiness size={17} />} label="Bộ phận" value={profile.department} />
-              <InfoRow icon={<CalendarDays size={17} />} label="Ngày tham gia" value="12 tháng 03, 2022" />
+              <InfoRow icon={<BriefcaseBusiness size={17} />} label="Vai trò hệ thống" value={profile.position} />
+              <InfoRow icon={<ShieldCheck size={17} />} label="Nguồn dữ liệu" value="NRApp Gateway" />
             </div>
           </section>
 
           <aside className={styles.sideColumn}>
             <section className={`${styles.card} ${styles.summaryCard}`}>
               <div className={styles.cardHeader}>
-                <div><p>Hoạt động cá nhân</p><h3>Tháng 8/2026</h3></div>
+                <div><p>Thông tin phiên</p><h3>Tài khoản hiện tại</h3></div>
               </div>
               <div className={styles.summaryStats}>
-                <div><strong>21</strong><span>Ngày làm việc</span></div>
-                <div><strong>98%</strong><span>Tỷ lệ đúng giờ</span></div>
-                <div><strong>14</strong><span>Việc hoàn tất</span></div>
-                <div><strong>4.9</strong><span>Điểm hiệu suất</span></div>
+                <div><strong>OTP</strong><span>Xác thực đăng nhập</span></div>
+                <div><strong>JWT</strong><span>Phiên API</span></div>
+                <div><strong>{user?.role ?? "—"}</strong><span>Vai trò</span></div>
+                <div><strong>HttpOnly</strong><span>Lưu cookie</span></div>
               </div>
             </section>
 
@@ -234,7 +259,7 @@ export default function ProfilePage() {
               <div className={styles.quickIcon}><ShieldCheck size={20} /></div>
               <div>
                 <strong>Tài khoản được bảo vệ</strong>
-                <p>Xác thực hai lớp đang bật và không có hoạt động đăng nhập bất thường.</p>
+                <p>Phiên web dùng cookie HttpOnly và mọi yêu cầu đi qua BFF cùng NRApp Gateway.</p>
               </div>
               <button onClick={() => setTab("security")}>Kiểm tra bảo mật</button>
             </section>
@@ -251,33 +276,26 @@ export default function ProfilePage() {
             </div>
             <div className={styles.securityItem}>
               <span className={styles.securityIcon}><KeyRound size={18} /></span>
-              <div><strong>Mật khẩu</strong><p>Được thay đổi lần cuối 45 ngày trước.</p></div>
-              <button className="button-secondary" onClick={() => notify("Luồng đổi mật khẩu đang ở chế độ demo")}>Đổi mật khẩu</button>
+              <div><strong>Mật khẩu</strong><p>Backend hiện chưa công bố API đổi mật khẩu.</p></div>
+              <button className="button-secondary" disabled title="Backend chưa hỗ trợ">Đổi mật khẩu</button>
             </div>
             <div className={styles.securityItem}>
-              <span className={styles.securityIcon}><Smartphone size={18} /></span>
-              <div><strong>Xác thực hai lớp</strong><p>Yêu cầu mã xác thực khi đăng nhập trên thiết bị mới.</p></div>
-              <Toggle active={twoFactor} onClick={() => setTwoFactor((value) => !value)} label="Xác thực hai lớp" />
+              <span className={styles.securityIcon}><Mail size={18} /></span>
+              <div><strong>Xác thực OTP</strong><p>Mã OTP được gửi qua email khi tạo phiên đăng nhập mới.</p></div>
+              <Badge tone="emerald">Bắt buộc</Badge>
             </div>
           </section>
 
           <section className={styles.card}>
             <div className={styles.cardHeader}>
               <div><p>Thiết bị đăng nhập</p><h3>Phiên đang hoạt động</h3></div>
-              <Badge tone="emerald" dot>{androidSessionActive ? "2 thiết bị" : "1 thiết bị"}</Badge>
+              <Badge tone="emerald" dot>Phiên hiện tại</Badge>
             </div>
             <div className={styles.sessionItem}>
               <span><Laptop size={20} /></span>
-              <div><strong>Chrome trên Windows</strong><p>Hồ Chí Minh · Phiên hiện tại</p></div>
+              <div><strong>Trình duyệt hiện tại</strong><p>Được bảo vệ bằng cookie HttpOnly</p></div>
               <Badge tone="emerald">Đang dùng</Badge>
             </div>
-            {androidSessionActive ? (
-              <div className={styles.sessionItem}>
-                <span><Smartphone size={20} /></span>
-                <div><strong>NRApp trên Android</strong><p>Hồ Chí Minh · 2 giờ trước</p></div>
-                <button onClick={() => { setAndroidSessionActive(false); notify("Đã đăng xuất phiên Android"); }}>Đăng xuất</button>
-              </div>
-            ) : null}
           </section>
         </div>
       ) : null}
@@ -299,7 +317,7 @@ export default function ProfilePage() {
             ))}
           </div>
           <div className={styles.notificationFooter}>
-            <button className="button-primary" onClick={() => notify("Tùy chọn thông báo đã được lưu")}><Save size={15} /> Lưu tùy chọn</button>
+            <button className="button-primary" onClick={() => notify("Đã lưu tùy chọn trong phiên trình duyệt hiện tại")}><Save size={15} /> Lưu tùy chọn</button>
           </div>
         </section>
       ) : null}
@@ -310,7 +328,7 @@ export default function ProfilePage() {
           <div><strong>Vùng nguy hiểm</strong><p>Xóa tài khoản sẽ thu hồi toàn bộ quyền truy cập và không thể hoàn tác.</p></div>
         </div>
         <div className={styles.dangerActions}>
-          <button className="button-secondary" onClick={() => notify("Đây là bản giao diện demo, chưa thực hiện đăng xuất")}><LogOut size={15} /> Đăng xuất</button>
+          <button className="button-secondary" onClick={() => void handleLogout()}><LogOut size={15} /> Đăng xuất</button>
           <button className="button-danger" onClick={() => setDeleteOpen(true)}><Trash2 size={15} /> Xóa tài khoản</button>
         </div>
       </section>
@@ -323,15 +341,15 @@ export default function ProfilePage() {
               <button type="button" onClick={() => setEditing(false)} aria-label="Đóng"><X size={18} /></button>
             </div>
             <div className={styles.modalBody}>
-              <div className={styles.editIdentity}><Avatar initials={initials} size="lg" /><div><strong>Ảnh đại diện</strong><span>Hiện đang dùng tên viết tắt của bạn.</span></div><button type="button" className="button-secondary" onClick={() => notify("Trình chọn ảnh đang ở chế độ giao diện demo")}>Đổi ảnh</button></div>
+              <div className={styles.editIdentity}><Avatar initials={initials} size="lg" /><div><strong>Ảnh đại diện</strong><span>Backend hiện dùng tên viết tắt và chưa có API tải ảnh.</span></div><button type="button" className="button-secondary" disabled>Đổi ảnh</button></div>
               <label><span className="form-label">Họ và tên</span><input className="field" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required autoFocus /></label>
               <div className={styles.formGrid}>
                 <label><span className="form-label">Email</span><input className="field" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} required /></label>
-                <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} onChange={(event) => setDraft({ ...draft, phone: event.target.value })} /></label>
+                <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} disabled /></label>
               </div>
               <div className={styles.formGrid}>
-                <label><span className="form-label">Bộ phận</span><input className="field" value={draft.department} onChange={(event) => setDraft({ ...draft, department: event.target.value })} /></label>
-                <label><span className="form-label">Chức danh</span><input className="field" value={draft.position} onChange={(event) => setDraft({ ...draft, position: event.target.value })} /></label>
+                <label><span className="form-label">Hệ thống</span><input className="field" value={draft.department} disabled /></label>
+                <label><span className="form-label">Vai trò</span><input className="field" value={draft.position} disabled /></label>
               </div>
             </div>
             <div className={styles.modalFooter}>
@@ -347,10 +365,10 @@ export default function ProfilePage() {
           <section ref={deleteDialogRef} className={`${styles.deleteModal} modal-card`} onMouseDown={(event) => event.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="delete-account-title">
             <span><Trash2 size={23} /></span>
             <h2 id="delete-account-title">Xóa tài khoản?</h2>
-            <p>Tài khoản và quyền quản trị của bạn sẽ bị xóa vĩnh viễn. Trong bản demo này, thao tác chỉ đóng hộp thoại.</p>
+            <p>Tài khoản và quyền quản trị của bạn sẽ bị xóa vĩnh viễn trên NRApp. Thao tác này không thể hoàn tác.</p>
             <div>
               <button className="button-secondary" onClick={() => setDeleteOpen(false)} autoFocus>Giữ tài khoản</button>
-              <button className="button-danger" onClick={() => { setDeleteOpen(false); notify("Đã mô phỏng thao tác xóa tài khoản"); }}>Xóa vĩnh viễn</button>
+              <button className="button-danger" onClick={() => void deleteAccount()}>Xóa vĩnh viễn</button>
             </div>
           </section>
         </div>

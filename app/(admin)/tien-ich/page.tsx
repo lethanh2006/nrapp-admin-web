@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -22,13 +24,9 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { SectionHeading } from "@/components/ui/section-heading";
-import {
-  canteenOrders,
-  conversations,
-  employees,
-  scheduleRequests,
-  tasks,
-} from "@/lib/mock-data";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { gatewayApi } from "@/lib/api/gateway";
+import { unwrapData, type ApiChatListItem, type ApiOrderPage, type ApiScheduleRequest, type ApiTaskPage, type ApiUser } from "@/lib/api/domain";
 import type { BadgeTone } from "@/lib/types";
 import styles from "./tien-ich.module.css";
 
@@ -46,11 +44,41 @@ type Tool = {
 };
 
 export default function UtilitiesPage() {
-  const openTasks = tasks.filter((task) => task.status !== "done").length;
-  const pendingRequests = scheduleRequests.filter((request) => request.status === "pending").length;
-  const activeEmployees = employees.filter((employee) => employee.status === "active").length;
-  const activeOrders = canteenOrders.filter((order) => order.status !== "completed").length;
-  const unreadMessages = conversations.reduce((total, conversation) => total + conversation.unread, 0);
+  const [metrics, setMetrics] = useState({ openTasks: 0, pendingRequests: 0, employees: 0, activeOrders: 0, unreadMessages: 0 });
+  const [services, setServices] = useState({ data: false, attendance: false, canteen: false });
+  const [lastSync, setLastSync] = useState("");
+
+  const loadOverview = useCallback(async () => {
+    const results = await Promise.allSettled([
+      gatewayApi<ApiTaskPage>("todo?limit=100"),
+      gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/all"),
+      gatewayApi<{ users: ApiUser[] }>("user/user/all"),
+      gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
+      gatewayApi<{ chats: ApiChatListItem[] }>("chat/chat/all"),
+    ]);
+    const [tasksResult, schedulesResult, usersResult, ordersResult, chatsResult] = results;
+    setMetrics({
+      openTasks: tasksResult.status === "fulfilled" ? (tasksResult.value.tasks ?? []).filter((item) => !["done", "cancelled"].includes(item.status)).length : 0,
+      pendingRequests: schedulesResult.status === "fulfilled" ? unwrapData(schedulesResult.value).filter((item) => item.status === "pending").length : 0,
+      employees: usersResult.status === "fulfilled" ? (usersResult.value.users ?? []).length : 0,
+      activeOrders: ordersResult.status === "fulfilled" ? (ordersResult.value.orders ?? []).filter((item) => !["COMPLETED", "PAID", "CANCELLED"].includes(item.status)).length : 0,
+      unreadMessages: chatsResult.status === "fulfilled" ? (chatsResult.value.chats ?? []).reduce((total, item) => total + (item.chat.unseenCount ?? 0), 0) : 0,
+    });
+    setServices({
+      data: tasksResult.status === "fulfilled" && usersResult.status === "fulfilled",
+      attendance: schedulesResult.status === "fulfilled",
+      canteen: ordersResult.status === "fulfilled",
+    });
+    setLastSync(new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date()));
+  }, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(loadOverview);
+    const timer = window.setInterval(() => void loadOverview(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [loadOverview]);
+
+  const { openTasks, pendingRequests, employees: activeEmployees, activeOrders, unreadMessages } = metrics;
 
   const tools: Tool[] = [
     {
@@ -110,29 +138,31 @@ export default function UtilitiesPage() {
     },
   ];
 
-  const systemServices = [
+  const systemServices = useMemo(() => [
     {
-      label: "Đồng bộ dữ liệu",
-      detail: "Hoạt động bình thường",
-      value: 100,
+      label: "Dữ liệu công việc & nhân sự",
+      detail: services.data ? "Kết nối thành công" : "Không thể kết nối",
+      value: services.data ? 100 : 0,
       icon: Database,
-      tone: "emerald",
+      tone: services.data ? "emerald" : "slate",
     },
     {
-      label: "Thiết bị chấm công",
-      detail: "8/8 thiết bị trực tuyến",
-      value: 100,
+      label: "Dịch vụ lịch & chấm công",
+      detail: services.attendance ? "Kết nối thành công" : "Không thể kết nối",
+      value: services.attendance ? 100 : 0,
       icon: Fingerprint,
-      tone: "blue",
+      tone: services.attendance ? "blue" : "slate",
     },
     {
-      label: "Dịch vụ thông báo",
-      detail: "Độ trễ trung bình 42ms",
-      value: 96,
+      label: "Dịch vụ căn tin",
+      detail: services.canteen ? "Kết nối thành công" : "Không thể kết nối",
+      value: services.canteen ? 100 : 0,
       icon: BellRing,
-      tone: "violet",
+      tone: services.canteen ? "violet" : "slate",
     },
-  ];
+  ], [services]);
+  const healthyServices = systemServices.filter((service) => service.value === 100).length;
+  const healthScore = Math.round((healthyServices / systemServices.length) * 100);
 
   return (
     <div className={styles.page}>
@@ -165,7 +195,7 @@ export default function UtilitiesPage() {
           <span className={styles.statusPulse} />
           <span>
             <small>TRẠNG THÁI HỆ THỐNG</small>
-            <strong>Tất cả dịch vụ ổn định</strong>
+            <strong>{healthyServices === systemServices.length ? "Các API chính đang hoạt động" : `${healthyServices}/${systemServices.length} nhóm API kết nối được`}</strong>
           </span>
           <CheckCircle2 size={20} />
         </div>
@@ -224,7 +254,7 @@ export default function UtilitiesPage() {
               <span>Cập nhật tự động mỗi 60 giây</span>
             </div>
             <Badge tone="emerald" dot>
-              Đang ổn định
+              {healthyServices === systemServices.length ? "Đang ổn định" : "Cần kiểm tra"}
             </Badge>
           </div>
 
@@ -232,13 +262,13 @@ export default function UtilitiesPage() {
             <div className={styles.healthScore}>
               <div className={styles.healthRing}>
                 <span>
-                  <strong>98</strong>
+                  <strong>{healthScore}</strong>
                   <small>/ 100</small>
                 </span>
               </div>
               <div>
-                <strong>Hiệu năng xuất sắc</strong>
-                <p>Không phát hiện gián đoạn dịch vụ trong 30 ngày gần nhất.</p>
+                <strong>{healthyServices === systemServices.length ? "Gateway phản hồi đầy đủ" : "Một số API chưa phản hồi"}</strong>
+                <p>Điểm số được tính trực tiếp từ kết quả gọi API mới nhất.</p>
                 <span>
                   <ShieldCheck size={14} /> Được bảo vệ &amp; đồng bộ
                 </span>
@@ -291,7 +321,7 @@ export default function UtilitiesPage() {
               <strong>{openTasks.toString().padStart(2, "0")}</strong>
             </div>
             <div>
-              <span>Nhân sự online</span>
+              <span>Tài khoản nhân sự</span>
               <strong>{activeEmployees.toString().padStart(2, "0")}</strong>
             </div>
             <div>
@@ -305,10 +335,10 @@ export default function UtilitiesPage() {
               <ServerCog size={17} />
             </span>
             <span>
-              <small>SAO LƯU GẦN NHẤT</small>
-              <strong>Hôm nay · 04:30</strong>
+              <small>ĐỒNG BỘ API GẦN NHẤT</small>
+              <strong>{lastSync || "Đang kết nối..."}</strong>
             </span>
-            <Badge tone="emerald">Hoàn tất</Badge>
+            <Badge tone={healthyServices === systemServices.length ? "emerald" : "amber"}>{healthyServices === systemServices.length ? "Hoàn tất" : "Một phần"}</Badge>
           </div>
 
           <Link href="/tro-chuyen" className={styles.supportLink}>

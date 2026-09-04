@@ -25,11 +25,12 @@ import {
   UtensilsCrossed,
   Warehouse,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
-import { canteenOrders } from "@/lib/mock-data";
+import { gatewayApi } from "@/lib/api/gateway";
+import { toCanteenOrder, type ApiExpiryAlert, type ApiIngredient, type ApiListResponse, type ApiMenuCatalog, type ApiOrder, type ApiOrderPage, type ApiTopDish } from "@/lib/api/domain";
 import type { BadgeTone, CanteenOrder } from "@/lib/types";
 import styles from "./can-tin.module.css";
 
@@ -79,46 +80,6 @@ const statusMeta: Record<
   completed: { label: "Đã hoàn tất", shortLabel: "Hoàn tất", tone: "slate" },
 };
 
-const initialMenu: MenuItem[] = [
-  { id: "menu-1", name: "Cơm gà xối mỡ", category: "Cơm", price: 52000, sold: 38, available: true, prep: "12 phút", tone: "red" },
-  { id: "menu-2", name: "Bún bò Huế", category: "Món nước", price: 49000, sold: 31, available: true, prep: "10 phút", tone: "amber" },
-  { id: "menu-3", name: "Cơm sườn nướng", category: "Cơm", price: 57000, sold: 27, available: true, prep: "14 phút", tone: "emerald" },
-  { id: "menu-4", name: "Mì xào bò", category: "Món xào", price: 59000, sold: 22, available: true, prep: "15 phút", tone: "violet" },
-  { id: "menu-5", name: "Cơm cá kho", category: "Cơm", price: 55000, sold: 19, available: false, prep: "12 phút", tone: "cyan" },
-  { id: "menu-6", name: "Canh rong biển", category: "Món thêm", price: 20000, sold: 17, available: true, prep: "5 phút", tone: "emerald" },
-];
-
-const initialInventory: InventoryItem[] = [
-  { id: "stock-1", name: "Gạo ST25", unit: "kg", quantity: 42, capacity: 60, minimum: 15, updatedAt: "08:20 hôm nay", supplier: "Nông sản An Phú" },
-  { id: "stock-2", name: "Thịt gà", unit: "kg", quantity: 8, capacity: 32, minimum: 10, updatedAt: "07:45 hôm nay", supplier: "Thực phẩm Minh Long" },
-  { id: "stock-3", name: "Thịt bò", unit: "kg", quantity: 5, capacity: 24, minimum: 7, updatedAt: "07:42 hôm nay", supplier: "Thực phẩm Minh Long" },
-  { id: "stock-4", name: "Rau xanh", unit: "kg", quantity: 18, capacity: 25, minimum: 6, updatedAt: "06:50 hôm nay", supplier: "Rau sạch Đà Lạt" },
-  { id: "stock-5", name: "Nước giải khát", unit: "chai", quantity: 74, capacity: 100, minimum: 24, updatedAt: "Hôm qua", supplier: "Kho tổng HDG" },
-];
-
-const chartData: Record<string, { label: string; value: number }[]> = {
-  "7 ngày": [
-    { label: "T2", value: 62 },
-    { label: "T3", value: 78 },
-    { label: "T4", value: 70 },
-    { label: "T5", value: 92 },
-    { label: "T6", value: 84 },
-    { label: "T7", value: 48 },
-    { label: "CN", value: 36 },
-  ],
-  "30 ngày": [
-    { label: "Tuần 1", value: 67 },
-    { label: "Tuần 2", value: 76 },
-    { label: "Tuần 3", value: 72 },
-    { label: "Tuần 4", value: 91 },
-  ],
-  "Quý này": [
-    { label: "Tháng 6", value: 71 },
-    { label: "Tháng 7", value: 82 },
-    { label: "Tháng 8", value: 94 },
-  ],
-};
-
 const money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
 
 function normalizeSearch(value: string) {
@@ -130,19 +91,69 @@ function normalizeSearch(value: string) {
     .trim();
 }
 
+function revenueSeries(orders: ApiOrder[], range: "7 ngày" | "30 ngày" | "Quý này") {
+  const bucketCount = range === "7 ngày" ? 7 : range === "30 ngày" ? 4 : 3;
+  const bucketDays = range === "7 ngày" ? 1 : range === "30 ngày" ? 7 : 30;
+  const now = new Date();
+  now.setHours(23, 59, 59, 999);
+  const amounts = Array.from({ length: bucketCount }, (_, index) => {
+    const end = new Date(now);
+    end.setDate(now.getDate() - (bucketCount - index - 1) * bucketDays);
+    const start = new Date(end);
+    start.setDate(end.getDate() - bucketDays + 1);
+    start.setHours(0, 0, 0, 0);
+    const amount = orders.filter((order) => order.paymentStatus === "PAID" && new Date(order.createdAt) >= start && new Date(order.createdAt) <= end).reduce((sum, order) => sum + order.finalAmount, 0);
+    const label = range === "7 ngày" ? new Intl.DateTimeFormat("vi-VN", { weekday: "short" }).format(end) : range === "30 ngày" ? `Tuần ${index + 1}` : `T${new Intl.DateTimeFormat("vi-VN", { month: "2-digit" }).format(end)}`;
+    return { label, amount };
+  });
+  const maximum = Math.max(...amounts.map((item) => item.amount), 1);
+  return amounts.map((item) => ({ ...item, value: Math.round((item.amount / maximum) * 100) }));
+}
+
 export default function CanteenPage() {
   const [activeTab, setActiveTab] = useState<CanteenTab>("orders");
-  const [orders, setOrders] = useState<CanteenOrder[]>(() => canteenOrders.map((order) => ({ ...order, items: [...order.items] })));
+  const [orders, setOrders] = useState<CanteenOrder[]>([]);
+  const [apiOrders, setApiOrders] = useState<ApiOrder[]>([]);
   const [orderQuery, setOrderQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
   const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
-  const [menu, setMenu] = useState<MenuItem[]>(initialMenu);
+  const [menu, setMenu] = useState<MenuItem[]>([]);
   const [menuQuery, setMenuQuery] = useState("");
   const [menuCategory, setMenuCategory] = useState("Tất cả");
-  const [inventory, setInventory] = useState<InventoryItem[]>(initialInventory);
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [topDishes, setTopDishes] = useState<ApiTopDish[]>([]);
   const [stockFilter, setStockFilter] = useState<StockFilter>("all");
   const [analyticsRange, setAnalyticsRange] = useState("7 ngày");
   const [notice, setNotice] = useState("");
+
+  const loadCanteen = useCallback(async () => {
+    try {
+      const [orderResult, catalog, ingredientResult, alerts, dishes] = await Promise.all([
+        gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
+        gatewayApi<ApiMenuCatalog>("canteen/admin/menu"),
+        gatewayApi<ApiListResponse<ApiIngredient>>("canteen/inventory/ingredients?limit=100"),
+        gatewayApi<ApiExpiryAlert[]>("canteen/inventory/expiry-alerts"),
+        gatewayApi<ApiTopDish[]>("canteen/analytics/top-dishes?limit=10"),
+      ]);
+      const rawOrders = Array.isArray(orderResult.orders) ? orderResult.orders : [];
+      setApiOrders(rawOrders);
+      setOrders(rawOrders.map(toCanteenOrder).filter((order): order is CanteenOrder => order !== null));
+      const sales = new Map((Array.isArray(dishes) ? dishes : []).map((item) => [item.menuItemId, item.salesCount]));
+      const categoryNames = new Map((catalog.categories ?? []).map((item) => [item._id, item.name]));
+      const tones: MenuItem["tone"][] = ["red", "amber", "emerald", "violet", "cyan"];
+      setMenu((catalog.items ?? []).map((item, index) => ({ id: item._id, name: item.name, category: categoryNames.get(item.categoryId) ?? "Chưa phân loại", price: item.price, sold: sales.get(item._id) ?? 0, available: item.isAvailable, prep: "Chưa có dữ liệu", tone: tones[index % tones.length] })));
+      setTopDishes(Array.isArray(dishes) ? dishes : []);
+      const expiryRows = Array.isArray(alerts) ? alerts : [];
+      setInventory((ingredientResult.data ?? []).map((item) => {
+        const batches = expiryRows.filter((batch) => batch.ingredientId === item._id);
+        const quantity = batches.reduce((sum, batch) => sum + batch.quantity, 0);
+        const capacity = Math.max(batches.reduce((sum, batch) => sum + batch.originalQuantity, 0), item.minimumThreshold, 1);
+        return { id: item._id, name: item.name, unit: item.unit, quantity, capacity, minimum: item.minimumThreshold, updatedAt: item.updatedAt ? new Intl.DateTimeFormat("vi-VN").format(new Date(item.updatedAt)) : "Chưa cập nhật", supplier: batches.find((batch) => batch.supplier)?.supplier ?? "Chưa cập nhật" };
+      }));
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể tải dữ liệu căn tin."); }
+  }, []);
+
+  useEffect(() => { void Promise.resolve().then(loadCanteen); }, [loadCanteen]);
 
   const visibleOrders = useMemo(() => {
     const query = normalizeSearch(orderQuery);
@@ -168,51 +179,35 @@ export default function CanteenPage() {
     [inventory, stockFilter],
   );
 
-  const updateOrderStatus = (order: CanteenOrder, next: CanteenOrder["status"]) => {
-    setOrders((current) => current.map((item) => (item.id === order.id ? { ...item, status: next } : item)));
-    setNotice(`${order.code} đã chuyển sang “${statusMeta[next].label}”.`);
+  const chartData: { [range: string]: Array<{ label: string; amount: number; value: number }> } = useMemo(() => ({
+    "7 ngày": revenueSeries(apiOrders, "7 ngày"),
+    "30 ngày": revenueSeries(apiOrders, "30 ngày"),
+    "Quý này": revenueSeries(apiOrders, "Quý này"),
+  }), [apiOrders]);
+
+  const updateOrderStatus = async (order: CanteenOrder, next: CanteenOrder["status"]) => {
+    const endpoint = next === "confirmed" ? `canteen/orders/${order.id}/confirm` : next === "cooking" ? `canteen/kitchen/orders/${order.id}/cooking` : next === "ready" ? `canteen/kitchen/orders/${order.id}/ready` : `canteen/orders/${order.id}/complete`;
+    try {
+      await gatewayApi(endpoint, { method: "PATCH" });
+      await loadCanteen();
+      setNotice(`${order.code} đã chuyển sang “${statusMeta[next].label}”.`);
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể cập nhật đơn hàng."); }
   };
 
-  const createDemoOrder = () => {
-    const code = `HDG-${String(830 + orders.length).padStart(4, "0")}`;
-    setOrders((current) => [
-      {
-        id: `order-${Date.now()}`,
-        code,
-        table: "Bàn 06",
-        customer: "Khách tại quầy",
-        items: ["Cơm gà xối mỡ × 1", "Trà tắc × 1"],
-        total: 67000,
-        createdAt: "Vừa xong",
-        status: "new",
-        payment: "unpaid",
-      },
-      ...current,
-    ]);
-    setActiveTab("orders");
-    setStatusFilter("all");
-    setPaymentFilter("all");
-    setNotice(`Đã tạo đơn nháp ${code}.`);
+  const receiveNextOrder = async () => {
+    try { await gatewayApi("canteen/kitchen/next", { method: "POST" }); await loadCanteen(); setNotice("Đã nhận đơn ưu tiên tiếp theo."); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Không thể nhận đơn tiếp theo."); }
   };
 
-  const receiveNextOrder = () => {
-    const nextOrder = orders.find((order) => order.status === "confirmed");
-    if (!nextOrder) {
-      setNotice("Hiện không còn đơn chờ bếp.");
-      return;
-    }
-    updateOrderStatus(nextOrder, "cooking");
-  };
-
-  const toggleMenuItem = (id: string) => {
-    setMenu((current) => current.map((item) => (item.id === id ? { ...item, available: !item.available } : item)));
+  const toggleMenuItem = async (id: string) => {
     const item = menu.find((candidate) => candidate.id === id);
-    if (item) setNotice(`${item.name} đã ${item.available ? "tạm ngưng" : "mở lại"} trên thực đơn.`);
+    if (!item) return;
+    try { await gatewayApi(`canteen/admin/menu/${encodeURIComponent(id)}`, { method: "PUT", json: { isAvailable: !item.available } }); await loadCanteen(); setNotice(`${item.name} đã ${item.available ? "tạm ngưng" : "mở lại"} trên thực đơn.`); }
+    catch (error) { setNotice(error instanceof Error ? error.message : "Không thể cập nhật món ăn."); }
   };
 
   const restock = (item: InventoryItem) => {
-    setInventory((current) => current.map((candidate) => (candidate.id === item.id ? { ...candidate, quantity: candidate.capacity, updatedAt: "Vừa cập nhật" } : candidate)));
-    setNotice(`Đã tạo phiếu nhập bù cho ${item.name}.`);
+    setNotice(`API nhập lô cần số lượng, hạn dùng và giá vốn cho ${item.name}; hãy dùng biểu mẫu nhập kho đầy đủ.`);
   };
 
   const resetOrderFilters = () => {
@@ -225,6 +220,12 @@ export default function CanteenPage() {
   const newCount = orders.filter((order) => order.status === "new" || order.status === "confirmed").length;
   const lowStockCount = inventory.filter((item) => item.quantity <= item.minimum).length;
   const revenue = orders.filter((order) => order.payment === "paid").reduce((sum, order) => sum + order.total, 0);
+  const completedCount = apiOrders.filter((order) => order.status === "COMPLETED" || order.status === "PAID").length;
+  const cancelledCount = apiOrders.filter((order) => order.status === "CANCELLED").length;
+  const completionRate = Math.round((completedCount / Math.max(apiOrders.length, 1)) * 100);
+  const averageOrder = Math.round(apiOrders.reduce((sum, order) => sum + order.finalAmount, 0) / Math.max(apiOrders.length, 1));
+  const timeSlots = [[7, 9], [9, 11], [11, 13], [13, 15]].map(([start, end]) => ({ start, end, count: apiOrders.filter((order) => { const hour = new Date(order.createdAt).getHours(); return hour >= start && hour < end; }).length }));
+  const maxSlotCount = Math.max(...timeSlots.map((slot) => slot.count), 1);
 
   return (
     <div className={styles.page}>
@@ -234,11 +235,11 @@ export default function CanteenPage() {
         description="Theo dõi xuyên suốt từ lúc tiếp nhận đơn đến chế biến, giao món và kiểm soát nguyên liệu trong ngày."
         actions={
           <>
-            <button className="button-secondary" type="button" onClick={() => setNotice("Báo cáo ca sáng đã sẵn sàng để tải xuống.")}>
-              <Download size={16} /> Xuất báo cáo
+            <button className="button-secondary" type="button" onClick={() => void loadCanteen()}>
+              <Download size={16} /> Làm mới dữ liệu
             </button>
-            <button className="button-primary" type="button" onClick={createDemoOrder}>
-              <Plus size={16} /> Tạo đơn mới
+            <button className="button-primary" type="button" onClick={() => setActiveTab("menu")}>
+              <Plus size={16} /> Quản lý thực đơn
             </button>
           </>
         }
@@ -253,10 +254,10 @@ export default function CanteenPage() {
       ) : null}
 
       <section className={styles.statsGrid} aria-label="Tổng quan căn tin hôm nay">
-        <StatCard label="Đơn hôm nay" value="48" trend="12,5%" helper="so với hôm qua" icon={<ShoppingBag size={18} />} tone="red" />
+        <StatCard label="Đơn hiện có" value={orders.length} helper="theo dữ liệu máy chủ" icon={<ShoppingBag size={18} />} tone="red" />
         <StatCard label="Đang chờ xử lý" value={newCount} helper="cần được tiếp nhận" icon={<Clock3 size={18} />} tone="amber" />
-        <StatCard label="Đang chế biến" value={cookingCount} helper="thời gian TB 13 phút" icon={<ChefHat size={18} />} tone="blue" />
-        <StatCard label="Doanh thu ca" value={money.format(revenue)} trend="8,2%" helper="đã thanh toán" icon={<CircleDollarSign size={18} />} tone="emerald" />
+        <StatCard label="Đang chế biến" value={cookingCount} helper="theo trạng thái máy chủ" icon={<ChefHat size={18} />} tone="blue" />
+        <StatCard label="Doanh thu dữ liệu" value={money.format(revenue)} helper="các đơn đã thanh toán" icon={<CircleDollarSign size={18} />} tone="emerald" />
       </section>
 
       <nav className={styles.tabBar} aria-label="Phân hệ căn tin">
@@ -346,7 +347,7 @@ export default function CanteenPage() {
                   <div data-label="Trạng thái"><Badge tone={meta.tone} dot>{meta.shortLabel}</Badge></div>
                   <div className={styles.rowActions} data-label="Thao tác">
                     {meta.next && meta.action ? (
-                      <button className={styles.rowAction} type="button" onClick={() => updateOrderStatus(order, meta.next!)}>
+                      <button className={styles.rowAction} type="button" onClick={() => void updateOrderStatus(order, meta.next!)}>
                         {meta.action}<ArrowRight size={14} />
                       </button>
                     ) : <span className={styles.doneText}><CheckCircle2 size={14} /> Đã đóng đơn</span>}
@@ -371,7 +372,7 @@ export default function CanteenPage() {
               <span><strong>{cookingCount}</strong><small>Đang nấu</small></span>
               <span><strong>{orders.filter((order) => order.status === "ready").length}</strong><small>Chờ giao</small></span>
             </div>
-            <button type="button" onClick={receiveNextOrder}><CookingPot size={17} /> Nhận đơn tiếp theo</button>
+            <button type="button" onClick={() => void receiveNextOrder()}><CookingPot size={17} /> Nhận đơn tiếp theo</button>
           </div>
 
           <div className={styles.kitchenBoard}>
@@ -397,7 +398,7 @@ export default function CanteenPage() {
                           <ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul>
                           <div className={styles.kitchenCardFooter}>
                             <span>{order.customer}</span>
-                            {meta.next && meta.action ? <button type="button" onClick={() => updateOrderStatus(order, meta.next!)}>{meta.action}<ArrowRight size={13} /></button> : null}
+                            {meta.next && meta.action ? <button type="button" onClick={() => void updateOrderStatus(order, meta.next!)}>{meta.action}<ArrowRight size={13} /></button> : null}
                           </div>
                         </article>
                       );
@@ -415,7 +416,7 @@ export default function CanteenPage() {
         <section className={`surface-card ${styles.panel}`}>
           <div className={styles.panelHeader}>
             <div><span className={styles.panelEyebrow}>Danh mục bán hôm nay</span><h2>Thực đơn căn tin</h2><p>Bật hoặc tạm ngưng món theo năng lực phục vụ thực tế.</p></div>
-            <button className="button-primary" type="button" onClick={() => setNotice("Biểu mẫu thêm món mới đã được ghi nhận cho bản tích hợp API.")}><Plus size={16} /> Thêm món</button>
+            <button className="button-primary" type="button" disabled title="Cần biểu mẫu đầy đủ theo CreateMenuItemDto"><Plus size={16} /> Thêm món</button>
           </div>
           <div className={styles.toolbar}>
             <label className={styles.searchField}><Search size={17} /><span className="sr-only">Tìm món ăn</span><input value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Tìm tên món..." /></label>
@@ -427,7 +428,7 @@ export default function CanteenPage() {
               <article className={`${styles.menuCard} ${!item.available ? styles.menuCardDisabled : ""}`} key={item.id}>
                 <div className={`${styles.foodVisual} ${styles[`foodVisual_${item.tone}`]}`}><Soup size={27} /><span>{item.category}</span></div>
                 <div className={styles.menuCardBody}>
-                  <div className={styles.menuTitle}><div><h3>{item.name}</h3><p>{money.format(item.price)}</p></div><button className={`${styles.toggle} ${item.available ? styles.toggleActive : ""}`} type="button" role="switch" aria-checked={item.available} onClick={() => toggleMenuItem(item.id)}><span /></button></div>
+                <div className={styles.menuTitle}><div><h3>{item.name}</h3><p>{money.format(item.price)}</p></div><button className={`${styles.toggle} ${item.available ? styles.toggleActive : ""}`} type="button" role="switch" aria-checked={item.available} onClick={() => void toggleMenuItem(item.id)}><span /></button></div>
                   <div className={styles.menuMeta}><span><Clock3 size={13} /> {item.prep}</span><span><TrendingUp size={13} /> {item.sold} phần hôm nay</span></div>
                   <div className={styles.availability}><Badge tone={item.available ? "emerald" : "slate"} dot>{item.available ? "Đang mở bán" : "Tạm ngưng"}</Badge><button type="button" onClick={() => setNotice(`Đang mở thông tin món ${item.name}.`)}>Chi tiết</button></div>
                 </div>
@@ -440,8 +441,8 @@ export default function CanteenPage() {
       {activeTab === "inventory" ? (
         <section className={`surface-card ${styles.panel}`}>
           <div className={styles.panelHeader}>
-            <div><span className={styles.panelEyebrow}>Kiểm soát nguyên liệu</span><h2>Tồn kho hiện tại</h2><p>Hai nguyên liệu đang dưới ngưỡng an toàn và cần được nhập bù.</p></div>
-            <button className="button-primary" type="button" onClick={() => setNotice("Đã tạo phiếu nhập kho nháp.")}><Plus size={16} /> Tạo phiếu nhập</button>
+            <div><span className={styles.panelEyebrow}>Kiểm soát nguyên liệu</span><h2>Tồn kho hiện tại</h2><p>{lowStockCount} nguyên liệu đang dưới ngưỡng an toàn.</p></div>
+            <button className="button-primary" type="button" disabled title="Cần nhập đủ số lượng, hạn dùng và giá vốn"><Plus size={16} /> Tạo phiếu nhập</button>
           </div>
           <div className={styles.stockCallout}>
             <span className={styles.warningIcon}><TriangleAlert size={19} /></span>
@@ -483,32 +484,29 @@ export default function CanteenPage() {
                 <div><span className={styles.panelEyebrow}>Doanh thu</span><h2>Hiệu suất bán hàng</h2><p>Doanh thu đã thanh toán theo kỳ được chọn.</p></div>
                 <div className={styles.rangeTabs}>{Object.keys(chartData).map((range) => <button className={analyticsRange === range ? styles.rangeActive : ""} type="button" key={range} onClick={() => setAnalyticsRange(range)}>{range}</button>)}</div>
               </div>
-              <div className={styles.revenueSummary}><strong>12.860.000 ₫</strong><span><TrendingUp size={14} /> 8,2% so với kỳ trước</span></div>
+              <div className={styles.revenueSummary}><strong>{money.format(revenue)}</strong><span><TrendingUp size={14} /> Dữ liệu đã thanh toán</span></div>
               <div className={styles.chartWrap}>
                 <div className={styles.yAxis}><span>4tr</span><span>3tr</span><span>2tr</span><span>1tr</span><span>0</span></div>
                 <div className={styles.chart} style={{ gridTemplateColumns: `repeat(${chartData[analyticsRange].length}, minmax(0, 1fr))` }}>
-                  {chartData[analyticsRange].map((point, index) => <div className={styles.barColumn} key={point.label}><div className={styles.barTrack}><i style={{ height: `${point.value}%` }} className={index === chartData[analyticsRange].length - 1 ? styles.barHighlight : ""}><span>{Math.round(point.value * 38)}k</span></i></div><small>{point.label}</small></div>)}
+                  {chartData[analyticsRange].map((point, index) => <div className={styles.barColumn} key={point.label}><div className={styles.barTrack}><i style={{ height: `${point.value}%` }} className={index === chartData[analyticsRange].length - 1 ? styles.barHighlight : ""}><span>{money.format(point.amount)}</span></i></div><small>{point.label}</small></div>)}
                 </div>
               </div>
             </article>
             <aside className={`surface-card ${styles.performanceCard}`}>
-              <div className={styles.gaugeIcon}><Gauge size={22} /></div><span className={styles.panelEyebrow}>Hiệu suất ca</span><strong>92%</strong><p>37 trên 40 đơn được phục vụ đúng thời gian cam kết.</p><div className={styles.performanceTrack}><i /></div><ul><li><span>Thời gian xử lý TB</span><strong>13 phút</strong></li><li><span>Giá trị đơn TB</span><strong>67.000 ₫</strong></li><li><span>Tỷ lệ hủy đơn</span><strong>1,8%</strong></li></ul>
+              <div className={styles.gaugeIcon}><Gauge size={22} /></div><span className={styles.panelEyebrow}>Tỷ lệ hoàn tất</span><strong>{completionRate}%</strong><p>{completedCount} trên {apiOrders.length} đơn đã hoàn tất.</p><div className={styles.performanceTrack}><i style={{ width: `${completionRate}%` }} /></div><ul><li><span>Đơn đang xử lý</span><strong>{newCount + cookingCount}</strong></li><li><span>Giá trị đơn TB</span><strong>{money.format(averageOrder)}</strong></li><li><span>Đơn đã hủy</span><strong>{cancelledCount}</strong></li></ul>
             </aside>
           </div>
           <div className={styles.analyticsBottom}>
             <article className={`surface-card ${styles.topDishes}`}>
-              <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Top sản phẩm</span><h2>Món bán chạy</h2></div><Badge tone="red">Hôm nay</Badge></div>
-              {initialMenu.slice(0, 5).map((item, index) => <div className={styles.dishRank} key={item.id}><b>{index + 1}</b><span className={`${styles.rankIcon} ${styles[`foodVisual_${item.tone}`]}`}><Soup size={17} /></span><div><strong>{item.name}</strong><small>{item.category}</small></div><span className={styles.rankSales}><strong>{item.sold}</strong><small>phần</small></span><div className={styles.rankBar}><i style={{ width: `${(item.sold / initialMenu[0].sold) * 100}%` }} /></div></div>)}
+              <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Top sản phẩm</span><h2>Món bán chạy</h2></div><Badge tone="red">Từ API</Badge></div>
+              {topDishes.slice(0, 5).map((item, index) => <div className={styles.dishRank} key={item.menuItemId}><b>{index + 1}</b><span className={styles.rankIcon}><Soup size={17} /></span><div><strong>{item.name}</strong><small>{money.format(item.totalRevenue)}</small></div><span className={styles.rankSales}><strong>{item.salesCount}</strong><small>phần</small></span><div className={styles.rankBar}><i style={{ width: `${(item.salesCount / Math.max(topDishes[0]?.salesCount ?? 1, 1)) * 100}%` }} /></div></div>)}
             </article>
             <article className={`surface-card ${styles.shiftSummary}`}>
               <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Theo khung giờ</span><h2>Nhịp phục vụ hôm nay</h2></div><CalendarDays size={19} /></div>
               <div className={styles.shiftTimeline}>
-                <div><time>07:00 – 09:00</time><span><i style={{ width: "48%" }} /></span><strong>12 đơn</strong></div>
-                <div><time>09:00 – 11:00</time><span><i style={{ width: "64%" }} /></span><strong>16 đơn</strong></div>
-                <div><time>11:00 – 13:00</time><span><i style={{ width: "96%" }} /></span><strong>24 đơn</strong></div>
-                <div><time>13:00 – 15:00</time><span><i style={{ width: "28%" }} /></span><strong>7 đơn</strong></div>
+                {timeSlots.map((slot) => <div key={slot.start}><time>{String(slot.start).padStart(2, "0")}:00 – {String(slot.end).padStart(2, "0")}:00</time><span><i style={{ width: `${Math.round((slot.count / maxSlotCount) * 100)}%` }} /></span><strong>{slot.count} đơn</strong></div>)}
               </div>
-              <div className={styles.peakNote}><Flame size={17} /><div><strong>Khung giờ cao điểm</strong><p>11:00 – 13:00 · Chuẩn bị thêm 2 nhân sự phục vụ.</p></div></div>
+              <div className={styles.peakNote}><Flame size={17} /><div><strong>Khung giờ cao điểm</strong><p>Dựa trên số đơn thực tế trong dữ liệu hiện tại.</p></div></div>
             </article>
           </div>
         </section>

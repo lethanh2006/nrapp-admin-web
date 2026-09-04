@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Bell,
   CalendarDays,
@@ -15,7 +15,6 @@ import {
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
-  QrCode,
   ScanLine,
   Search,
   Settings,
@@ -28,6 +27,8 @@ import {
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
+import { useAuthSession } from "@/components/providers/auth-session-provider";
+import { getRoleLabel, getUserInitials, type SessionUser } from "@/lib/auth/session-user";
 import styles from "./app-shell.module.css";
 
 type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string };
@@ -40,8 +41,8 @@ const navigation: { label: string; items: NavItem[] }[] = [
   {
     label: "Vận hành",
     items: [
-      { href: "/lich-lam", label: "Lịch & chấm công", icon: CalendarDays, badge: "3" },
-      { href: "/cong-viec", label: "Công việc", icon: ClipboardCheck, badge: "5" },
+      { href: "/lich-lam", label: "Lịch & chấm công", icon: CalendarDays },
+      { href: "/cong-viec", label: "Công việc", icon: ClipboardCheck },
       { href: "/can-tin", label: "Vận hành căn tin", icon: UtensilsCrossed },
     ],
   },
@@ -49,7 +50,7 @@ const navigation: { label: string; items: NavItem[] }[] = [
     label: "Tổ chức",
     items: [
       { href: "/nhan-su", label: "Danh bạ nhân sự", icon: Users },
-      { href: "/tro-chuyen", label: "Trò chuyện", icon: MessageCircle, badge: "2" },
+      { href: "/tro-chuyen", label: "Trò chuyện", icon: MessageCircle },
       { href: "/tien-ich", label: "Trung tâm tiện ích", icon: Grid2X2 },
     ],
   },
@@ -71,11 +72,17 @@ function SidebarContent({
   collapsed,
   onCollapse,
   onNavigate,
+  user,
+  onLogout,
+  logoutPending,
 }: {
   pathname: string;
   collapsed: boolean;
   onCollapse: () => void;
   onNavigate?: () => void;
+  user: SessionUser;
+  onLogout: () => void;
+  logoutPending: boolean;
 }) {
   return (
     <>
@@ -128,17 +135,17 @@ function SidebarContent({
 
       <div className={styles.sidebarFooter}>
         <Link href="/ho-so" className={`${styles.userCard} ${pathname === "/ho-so" ? styles.userCardActive : ""}`} onClick={onNavigate}>
-          <Avatar initials="MA" size="sm" />
+          <Avatar initials={getUserInitials(user.name)} size="sm" />
           <span className={styles.userCopy}>
-            <strong>Minh Anh</strong>
-            <small>Quản trị viên</small>
+            <strong>{user.name}</strong>
+            <small>{getRoleLabel(user.role)}</small>
           </span>
           <Settings className={styles.userSettings} size={16} />
         </Link>
-        <Link href="/dang-nhap" className={styles.logoutButton} title="Đăng xuất" aria-label="Đăng xuất">
+        <button type="button" className={styles.logoutButton} title="Đăng xuất" aria-label="Đăng xuất" onClick={onLogout} disabled={logoutPending}>
           <LogOut size={18} />
-          <span>Đăng xuất</span>
-        </Link>
+          <span>{logoutPending ? "Đang đăng xuất..." : "Đăng xuất"}</span>
+        </button>
       </div>
     </>
   );
@@ -146,29 +153,35 @@ function SidebarContent({
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, logout } = useAuthSession();
   const searchInputRef = useRef<HTMLInputElement>(null);
   const mobileDialogRef = useRef<HTMLElement>(null);
-  const qrDialogRef = useRef<HTMLElement>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
-  const [qrOpen, setQrOpen] = useState(false);
   const [globalQuery, setGlobalQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
+  const [logoutPending, setLogoutPending] = useState(false);
+
+  async function handleLogout() {
+    if (logoutPending) return;
+    setLogoutPending(true);
+    try { await logout(); router.replace("/dang-nhap"); router.refresh(); } finally { setLogoutPending(false); }
+  }
 
   useEffect(() => {
-    document.body.style.overflow = mobileOpen || qrOpen ? "hidden" : "";
+    document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [mobileOpen, qrOpen]);
+  }, [mobileOpen]);
 
   useEffect(() => {
     const focusGlobalSearch = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        if (qrOpen) setQrOpen(false);
-        else if (mobileOpen) setMobileOpen(false);
+        if (mobileOpen) setMobileOpen(false);
         else if (notificationsOpen) setNotificationsOpen(false);
         return;
       }
@@ -179,10 +192,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", focusGlobalSearch);
     return () => window.removeEventListener("keydown", focusGlobalSearch);
-  }, [mobileOpen, notificationsOpen, qrOpen]);
+  }, [mobileOpen, notificationsOpen]);
 
   useEffect(() => {
-    const dialog = qrOpen ? qrDialogRef.current : mobileOpen ? mobileDialogRef.current : null;
+    const dialog = mobileOpen ? mobileDialogRef.current : null;
     if (!dialog) return;
     const previousFocus = document.activeElement as HTMLElement | null;
     const getFocusable = () => Array.from(
@@ -210,7 +223,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       dialog.removeEventListener("keydown", trapFocus);
       previousFocus?.focus();
     };
-  }, [mobileOpen, qrOpen]);
+  }, [mobileOpen]);
 
   const pageTitle = titles[pathname] ?? "Quản trị WorkSpace";
   const searchResults = useMemo(() => {
@@ -222,6 +235,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     ).slice(0, 5);
   }, [globalQuery]);
 
+  if (!user) return null;
+
   return (
     <div className={`${styles.shell} ${collapsed ? styles.shellCollapsed : ""}`}>
       <aside className={styles.sidebar}>
@@ -229,6 +244,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           pathname={pathname}
           collapsed={collapsed}
           onCollapse={() => setCollapsed((value) => !value)}
+          user={user}
+          onLogout={() => void handleLogout()}
+          logoutPending={logoutPending}
         />
       </aside>
 
@@ -243,6 +261,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               collapsed={false}
               onCollapse={() => setMobileOpen(false)}
               onNavigate={() => setMobileOpen(false)}
+              user={user}
+              onLogout={() => void handleLogout()}
+              logoutPending={logoutPending}
             />
           </aside>
         </div>
@@ -325,18 +346,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     </button>
                   </div>
                   <div className={styles.notificationItem}>
-                    <span className={`${styles.notificationIcon} ${styles.notificationIconRed}`}><CalendarDays size={16} /></span>
-                    <div><strong>3 lịch làm chờ duyệt</strong><p>Các yêu cầu mới vừa được gửi lên.</p><small>12 phút trước</small></div>
-                  </div>
-                  <div className={styles.notificationItem}>
                     <span className={`${styles.notificationIcon} ${styles.notificationIconGreen}`}><CheckCircle2 size={16} /></span>
-                    <div><strong>Đã hoàn tất kiểm kê</strong><p>Báo cáo kho căn tin đã sẵn sàng.</p><small>45 phút trước</small></div>
+                    <div><strong>Đã kết nối NRApp Gateway</strong><p>Dữ liệu trực tiếp được tải tại từng phân hệ.</p><small>Phiên hiện tại</small></div>
                   </div>
                 </div>
               ) : null}
             </div>
             <Link href="/ho-so" className={styles.topbarAvatar} aria-label="Mở hồ sơ cá nhân">
-              <Avatar initials="MA" size="sm" />
+              <Avatar initials={getUserInitials(user.name)} size="sm" />
             </Link>
           </div>
         </header>
@@ -349,31 +366,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <LayoutDashboard size={21} />
           <span>Tổng quan</span>
         </Link>
-        <button className={styles.scanButton} onClick={() => setQrOpen(true)} aria-label="Quét mã chấm công">
+        <Link href="/lich-lam" className={styles.scanButton} aria-label="Mở quản lý chấm công">
           <ScanLine size={25} />
-        </button>
+        </Link>
         <Link href="/ho-so" className={pathname === "/ho-so" ? styles.mobileNavActive : ""}>
           <UserCircle size={22} />
           <span>Hồ sơ</span>
         </Link>
       </nav>
 
-      {qrOpen ? (
-        <div className="modal-backdrop" onMouseDown={() => setQrOpen(false)}>
-          <section ref={qrDialogRef} className={`${styles.qrModal} modal-card`} onMouseDown={(event) => event.stopPropagation()} aria-modal="true" role="dialog" aria-label="Quét mã chấm công">
-            <button className={styles.qrClose} onClick={() => setQrOpen(false)} aria-label="Đóng" autoFocus><X size={19} /></button>
-            <span className={styles.qrModalIcon}><QrCode size={24} /></span>
-            <p className={styles.qrEyebrow}>Chấm công nhanh</p>
-            <h2>Đưa mã QR vào khung quét</h2>
-            <p>Trình diễn giao diện máy quét trên web. Khi kết nối backend, khu vực này có thể sử dụng camera của thiết bị.</p>
-            <div className={styles.qrFrame}>
-              <QrCode size={146} strokeWidth={1.35} />
-              <span className={styles.scanLine} />
-            </div>
-            <button className="button-secondary" onClick={() => setQrOpen(false)}>Đóng máy quét</button>
-          </section>
-        </div>
-      ) : null}
     </div>
   );
 }
