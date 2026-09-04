@@ -36,13 +36,6 @@ type Profile = {
   position: string;
 };
 
-const notificationOptions = [
-  { id: "schedule", title: "Lịch làm & chấm công", description: "Yêu cầu lịch mới, check-in muộn và báo cáo ngày." },
-  { id: "tasks", title: "Công việc được cập nhật", description: "Thay đổi trạng thái, bình luận và việc sắp đến hạn." },
-  { id: "canteen", title: "Vận hành căn tin", description: "Đơn hàng cần xử lý và cảnh báo hàng tồn kho." },
-  { id: "chat", title: "Tin nhắn nội bộ", description: "Tin nhắn trực tiếp và đề cập trong hội thoại." },
-];
-
 export default function ProfilePage() {
   const router = useRouter();
   const { user, logout, refreshSession } = useAuthSession();
@@ -58,7 +51,6 @@ export default function ProfilePage() {
   const [draft, setDraft] = useState(initialProfile);
   const [editing, setEditing] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [enabledNotifications, setEnabledNotifications] = useState(() => new Set(notificationOptions.map((item) => item.id)));
   const [toast, setToast] = useState("");
   const editDialogRef = useRef<HTMLFormElement>(null);
   const deleteDialogRef = useRef<HTMLElement>(null);
@@ -153,15 +145,6 @@ export default function ProfilePage() {
     }
   };
 
-  const toggleNotification = (id: string) => {
-    setEnabledNotifications((current) => {
-      const next = new Set(current);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  };
-
   const handleTabKey = (event: React.KeyboardEvent<HTMLDivElement>) => {
     if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
     event.preventDefault();
@@ -181,7 +164,7 @@ export default function ProfilePage() {
       <PageHeader
         eyebrow="Tài khoản quản trị"
         title="Hồ sơ cá nhân"
-        description="Quản lý thông tin cá nhân, bảo mật đăng nhập và tùy chọn nhận thông báo."
+        description="Quản lý thông tin cá nhân và bảo mật đăng nhập."
         actions={
           <button className="button-primary" onClick={openEditor}>
             <Edit3 size={16} /> Chỉnh sửa hồ sơ
@@ -207,7 +190,7 @@ export default function ProfilePage() {
         </div>
         <div className={styles.heroStatus}>
           <span><CheckCircle2 size={17} /> Tài khoản hoạt động</span>
-          <small>Lần truy cập cuối: Vừa xong</small>
+          <small>Phiên trình duyệt hiện tại</small>
         </div>
       </section>
 
@@ -304,20 +287,11 @@ export default function ProfilePage() {
         <section className={`${styles.card} ${styles.notificationsCard}`} id="notifications-panel" role="tabpanel" aria-labelledby="notifications-tab">
           <div className={styles.cardHeader}>
             <div><p>Tùy chọn cá nhân</p><h3>Kênh thông báo</h3></div>
-            <Badge tone="blue">Email + trong ứng dụng</Badge>
+            <Badge tone="slate">Chưa hỗ trợ</Badge>
           </div>
-          <p className={styles.notificationIntro}>Chọn những hoạt động bạn muốn nhận thông báo. Các cảnh báo bảo mật quan trọng luôn được bật.</p>
-          <div className={styles.notificationOptions}>
-            {notificationOptions.map((option) => (
-              <div className={styles.notificationOption} key={option.id}>
-                <span className={styles.notificationOptionIcon}><Bell size={17} /></span>
-                <div><strong>{option.title}</strong><p>{option.description}</p></div>
-                <Toggle active={enabledNotifications.has(option.id)} onClick={() => toggleNotification(option.id)} label={option.title} />
-              </div>
-            ))}
-          </div>
-          <div className={styles.notificationFooter}>
-            <button className="button-primary" onClick={() => notify("Đã lưu tùy chọn trong phiên trình duyệt hiện tại")}><Save size={15} /> Lưu tùy chọn</button>
+          <div className={styles.notificationUnavailable}>
+            <span className={styles.notificationOptionIcon}><Bell size={17} /></span>
+            <div><strong>Backend chưa có API cài đặt thông báo</strong><p>Các bộ đếm cần xử lý ở thanh điều hướng được lấy trực tiếp từ API. Hiện chưa thể cấu hình email hoặc bật/tắt từng loại thông báo.</p></div>
           </div>
         </section>
       ) : null}
@@ -386,20 +360,5 @@ function InfoRow({ icon, label, value, verified = false }: { icon: React.ReactNo
       <div><small>{label}</small><strong>{value}</strong></div>
       {verified ? <span className={styles.infoVerified}><CheckCircle2 size={13} /> Đã xác minh</span> : null}
     </div>
-  );
-}
-
-function Toggle({ active, onClick, label }: { active: boolean; onClick: () => void; label: string }) {
-  return (
-    <button
-      type="button"
-      className={`${styles.toggle} ${active ? styles.toggleActive : ""}`}
-      onClick={onClick}
-      role="switch"
-      aria-checked={active}
-      aria-label={label}
-    >
-      <span />
-    </button>
   );
 }

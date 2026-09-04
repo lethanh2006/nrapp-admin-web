@@ -29,6 +29,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { gatewayApi } from "@/lib/api/gateway";
 import { formatDateTime, initials, toScheduleRequest, unwrapData, userName, type ApiAttendance, type ApiScheduleRequest, type ApiUser, type ApiWorkRequest } from "@/lib/api/domain";
+import { notifyNavigationMetricsChanged } from "@/lib/navigation-metrics";
 import type { BadgeTone, ScheduleRequest } from "@/lib/types";
 import styles from "./lich-lam.module.css";
 
@@ -101,6 +102,7 @@ export default function SchedulePage() {
     try {
       await gatewayApi(`workschedule/schedule/requests/${encodeURIComponent(id)}/${status === "approved" ? "approve" : "reject"}`, { method: "POST", json: status === "rejected" ? { reason: reason!.trim() } : {} });
       await loadSchedule();
+      notifyNavigationMetricsChanged();
       if (selected) showNotice(`${status === "approved" ? "Đã duyệt" : "Đã từ chối"} yêu cầu của ${selected.employee}.`);
     } catch (error) {
       showNotice(error instanceof Error ? error.message : "Không thể xử lý yêu cầu.");
@@ -111,6 +113,7 @@ export default function SchedulePage() {
     try {
       await gatewayApi("workschedule/schedule/requests/bulk-approve", { method: "POST", json: { ids: requests.filter((item) => item.status === "pending").map((item) => item.id) } });
       await loadSchedule();
+      notifyNavigationMetricsChanged();
       showNotice("Đã duyệt toàn bộ yêu cầu đang chờ.");
     } catch (error) {
       showNotice(error instanceof Error ? error.message : "Không thể duyệt hàng loạt.");
@@ -124,6 +127,7 @@ export default function SchedulePage() {
     try {
       await gatewayApi(`workschedule/requests/${encodeURIComponent(request._id)}/${approved ? "approve" : "reject"}`, { method: "POST", json: approved ? {} : { reason: reason!.trim() } });
       await loadSchedule();
+      notifyNavigationMetricsChanged();
       showNotice(approved ? "Đã duyệt đơn từ." : "Đã từ chối đơn từ.");
     } catch (error) {
       showNotice(error instanceof Error ? error.message : "Không thể xử lý đơn từ.");
@@ -141,6 +145,7 @@ export default function SchedulePage() {
   };
 
   const checkedOutCount = todayAttendance.filter((item) => item.check_out_at).length;
+  const todayAttendanceRate = Math.round((todayAttendance.length / Math.max(employeeCount, 1)) * 100);
   const weeklyAttendance = Array.from({ length: 7 }, (_, index) => {
     const date = new Date();
     date.setDate(date.getDate() - 6 + index);
@@ -281,10 +286,10 @@ export default function SchedulePage() {
           <aside className={`${styles.todayPanel} surface-card`}>
             <div className={styles.todayHeading}>
               <div><p className={styles.kicker}>Hôm nay · {new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit" }).format(new Date())}</p><h2>Hiện diện</h2></div>
-              <Badge tone="emerald" dot>Ổn định</Badge>
+              <Badge tone={employeeCount === 0 ? "slate" : todayAttendanceRate >= 80 ? "emerald" : "amber"} dot={employeeCount > 0}>{employeeCount === 0 ? "Chưa có dữ liệu" : todayAttendanceRate >= 80 ? "Tốt" : "Cần theo dõi"}</Badge>
             </div>
             <div className={styles.attendanceRing}>
-              <div><strong>{Math.round((todayAttendance.length / Math.max(employeeCount, 1)) * 100)}%</strong><span>đã có mặt</span></div>
+              <div><strong>{todayAttendanceRate}%</strong><span>đã có mặt</span></div>
             </div>
             <div className={styles.attendanceLegend}>
               <div><span className={styles.greenDot} /><strong>{todayAttendance.length}</strong><small>Có mặt</small></div>

@@ -31,6 +31,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { gatewayApi } from "@/lib/api/gateway";
 import { toCanteenOrder, type ApiExpiryAlert, type ApiIngredient, type ApiListResponse, type ApiMenuCatalog, type ApiOrder, type ApiOrderPage, type ApiTopDish } from "@/lib/api/domain";
+import { notifyNavigationMetricsChanged } from "@/lib/navigation-metrics";
 import type { BadgeTone, CanteenOrder } from "@/lib/types";
 import styles from "./can-tin.module.css";
 
@@ -190,12 +191,13 @@ export default function CanteenPage() {
     try {
       await gatewayApi(endpoint, { method: "PATCH" });
       await loadCanteen();
+      notifyNavigationMetricsChanged();
       setNotice(`${order.code} đã chuyển sang “${statusMeta[next].label}”.`);
     } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể cập nhật đơn hàng."); }
   };
 
   const receiveNextOrder = async () => {
-    try { await gatewayApi("canteen/kitchen/next", { method: "POST" }); await loadCanteen(); setNotice("Đã nhận đơn ưu tiên tiếp theo."); }
+    try { await gatewayApi("canteen/kitchen/next", { method: "POST" }); await loadCanteen(); notifyNavigationMetricsChanged(); setNotice("Đã nhận đơn ưu tiên tiếp theo."); }
     catch (error) { setNotice(error instanceof Error ? error.message : "Không thể nhận đơn tiếp theo."); }
   };
 

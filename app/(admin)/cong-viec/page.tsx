@@ -30,6 +30,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
 import { gatewayApi } from "@/lib/api/gateway";
 import { toEmployee, toTask, type ApiTaskPage, type ApiUser } from "@/lib/api/domain";
+import { notifyNavigationMetricsChanged } from "@/lib/navigation-metrics";
 import type { Employee } from "@/lib/types";
 import type { BadgeTone, Task, TaskPriority, TaskStatus } from "@/lib/types";
 import styles from "./cong-viec.module.css";
@@ -147,6 +148,7 @@ export default function TasksPage() {
     try {
       await gatewayApi(`todo/${encodeURIComponent(id)}/status`, { method: "PATCH", json: { status } });
       setTaskItems((current) => current.map((task) => task.id === id ? { ...task, status, progress: statusMeta[status].progress } : task));
+      notifyNavigationMetricsChanged();
       showNotice(`Đã chuyển công việc sang “${statusMeta[status].label}”.`);
     } catch (error) { showNotice(error instanceof Error ? error.message : "Không thể cập nhật trạng thái."); }
   };
@@ -171,6 +173,7 @@ export default function TasksPage() {
       setForm({ ...emptyForm, assigneeId: employees[0]?.id ?? "" });
       setFormError(""); setModalOpen(false); setActiveStatus("all");
       await loadTasks();
+      notifyNavigationMetricsChanged();
       showNotice(`Đã tạo công việc và giao cho ${assignee.name}.`);
     } catch (error) { setFormError(error instanceof Error ? error.message : "Không thể tạo công việc."); }
   };

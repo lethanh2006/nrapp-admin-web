@@ -25,13 +25,16 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { useAuthSession } from "@/components/providers/auth-session-provider";
+import { gatewayApi } from "@/lib/api/gateway";
+import { unwrapData, type ApiChatListItem, type ApiOrderPage, type ApiScheduleRequest, type ApiTaskPage, type ApiWorkRequest } from "@/lib/api/domain";
 import { getRoleLabel, getUserInitials, type SessionUser } from "@/lib/auth/session-user";
+import { NAVIGATION_METRICS_EVENT } from "@/lib/navigation-metrics";
 import styles from "./app-shell.module.css";
 
-type NavItem = { href: string; label: string; icon: LucideIcon; badge?: string };
+type NavItem = { href: string; label: string; icon: LucideIcon };
 
 const navigation: { label: string; items: NavItem[] }[] = [
   {
@@ -75,6 +78,7 @@ function SidebarContent({
   user,
   onLogout,
   logoutPending,
+  navigationCounts,
 }: {
   pathname: string;
   collapsed: boolean;
@@ -83,6 +87,7 @@ function SidebarContent({
   user: SessionUser;
   onLogout: () => void;
   logoutPending: boolean;
+  navigationCounts: Partial<Record<string, number>>;
 }) {
   return (
     <>
@@ -115,6 +120,7 @@ function SidebarContent({
             {group.items.map((item) => {
               const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
               const Icon = item.icon;
+              const count = navigationCounts[item.href];
               return (
                 <Link
                   href={item.href}
@@ -125,7 +131,7 @@ function SidebarContent({
                 >
                   <Icon size={19} strokeWidth={active ? 2.4 : 2} />
                   <span className={styles.navText}>{item.label}</span>
-                  {item.badge ? <span className={styles.navBadge}>{item.badge}</span> : null}
+                  {count ? <span className={styles.navBadge}>{count > 99 ? "99+" : count}</span> : null}
                 </Link>
               );
             })}
@@ -160,10 +166,60 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(true);
   const [globalQuery, setGlobalQuery] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [logoutPending, setLogoutPending] = useState(false);
+  const [navigationMetrics, setNavigationMetrics] = useState<{
+    openTasks: number | null;
+    pendingSchedules: number | null;
+    pendingWorkRequests: number | null;
+    activeOrders: number | null;
+    unreadMessages: number | null;
+  }>({ openTasks: null, pendingSchedules: null, pendingWorkRequests: null, activeOrders: null, unreadMessages: null });
+  const [navigationMetricsError, setNavigationMetricsError] = useState(false);
+  const [navigationMetricsLoading, setNavigationMetricsLoading] = useState(true);
+  const navigationMetricsRequestRef = useRef(0);
+
+  const loadNavigationMetrics = useCallback(async () => {
+    const requestId = ++navigationMetricsRequestRef.current;
+    const openTasksRequest = Promise.all([
+      gatewayApi<ApiTaskPage>("todo?status=todo&limit=1"),
+      gatewayApi<ApiTaskPage>("todo?status=in_progress&limit=1"),
+    ]).then((pages) => pages.reduce((total, page) => total + (page.pagination?.total ?? page.tasks?.length ?? 0), 0));
+    const activeOrdersRequest = Promise.all(
+      (["CREATED", "CONFIRMED", "COOKING", "READY"] as const).map((status) =>
+        gatewayApi<ApiOrderPage>(`canteen/orders?status=${status}&limit=1`),
+      ),
+    ).then((pages) => pages.reduce((total, page) => total + (page.pagination?.total ?? page.orders?.length ?? 0), 0));
+    const [tasksResult, schedulesResult, workRequestsResult, ordersResult, chatsResult] = await Promise.allSettled([
+      openTasksRequest,
+      gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/pending"),
+      gatewayApi<ApiWorkRequest[] | { data: ApiWorkRequest[] }>("workschedule/requests/admin"),
+      activeOrdersRequest,
+      gatewayApi<{ chats: ApiChatListItem[] }>("chat/chat/all"),
+    ]);
+    if (requestId !== navigationMetricsRequestRef.current) return;
+
+    setNavigationMetrics({
+      openTasks: tasksResult.status === "fulfilled"
+        ? tasksResult.value
+        : null,
+      pendingSchedules: schedulesResult.status === "fulfilled"
+        ? unwrapData(schedulesResult.value).filter((request) => request.status === "pending").length
+        : null,
+      pendingWorkRequests: workRequestsResult.status === "fulfilled"
+        ? unwrapData(workRequestsResult.value).filter((request) => request.status === "pending").length
+        : null,
+      activeOrders: ordersResult.status === "fulfilled"
+        ? ordersResult.value
+        : null,
+      unreadMessages: chatsResult.status === "fulfilled"
+        ? (chatsResult.value.chats ?? []).reduce((total, item) => total + Math.max(item.chat.unseenCount ?? 0, 0), 0)
+        : null,
+    });
+    setNavigationMetricsError([tasksResult, schedulesResult, workRequestsResult, ordersResult, chatsResult].some((result) => result.status === "rejected"));
+    setNavigationMetricsLoading(false);
+  }, []);
 
   async function handleLogout() {
     if (logoutPending) return;
@@ -177,6 +233,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       document.body.style.overflow = "";
     };
   }, [mobileOpen]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const refresh = () => void loadNavigationMetrics();
+    refresh();
+    const timer = window.setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    window.addEventListener(NAVIGATION_METRICS_EVENT, refresh);
+    return () => {
+      navigationMetricsRequestRef.current += 1;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+      window.removeEventListener(NAVIGATION_METRICS_EVENT, refresh);
+    };
+  }, [loadNavigationMetrics, pathname, user?.id]);
 
   useEffect(() => {
     const focusGlobalSearch = (event: KeyboardEvent) => {
@@ -226,6 +297,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [mobileOpen]);
 
   const pageTitle = titles[pathname] ?? "Quản trị WorkSpace";
+  const pendingApprovals = navigationMetrics.pendingSchedules === null || navigationMetrics.pendingWorkRequests === null
+    ? null
+    : navigationMetrics.pendingSchedules + navigationMetrics.pendingWorkRequests;
+  const navigationCounts = {
+    "/lich-lam": pendingApprovals ?? 0,
+    "/cong-viec": navigationMetrics.openTasks ?? 0,
+    "/can-tin": navigationMetrics.activeOrders ?? 0,
+    "/tro-chuyen": navigationMetrics.unreadMessages ?? 0,
+  };
+  const notificationCount = Object.values(navigationCounts).reduce((total, count) => total + count, 0);
   const searchResults = useMemo(() => {
     const query = globalQuery.trim().toLocaleLowerCase("vi");
     const allItems = navigation.flatMap((group) => group.items);
@@ -247,6 +328,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           user={user}
           onLogout={() => void handleLogout()}
           logoutPending={logoutPending}
+          navigationCounts={navigationCounts}
         />
       </aside>
 
@@ -264,6 +346,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               user={user}
               onLogout={() => void handleLogout()}
               logoutPending={logoutPending}
+              navigationCounts={navigationCounts}
             />
           </aside>
         </div>
@@ -335,20 +418,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-expanded={notificationsOpen}
               >
                 <Bell size={19} />
-                {hasUnreadNotifications ? <span className={styles.notificationDot} /> : null}
+                {notificationCount > 0 ? <span className={styles.notificationDot} /> : null}
               </button>
               {notificationsOpen ? (
                 <div className={styles.notifications}>
                   <div className={styles.notificationHeader}>
-                    <strong>Thông báo</strong>
-                    <button onClick={() => setHasUnreadNotifications(false)}>
-                      {hasUnreadNotifications ? "Đánh dấu đã đọc" : "Đã đọc tất cả"}
-                    </button>
+                    <strong>Nội dung cần xử lý</strong>
+                    <span>Dữ liệu trực tiếp</span>
                   </div>
-                  <div className={styles.notificationItem}>
-                    <span className={`${styles.notificationIcon} ${styles.notificationIconGreen}`}><CheckCircle2 size={16} /></span>
-                    <div><strong>Đã kết nối NRApp Gateway</strong><p>Dữ liệu trực tiếp được tải tại từng phân hệ.</p><small>Phiên hiện tại</small></div>
-                  </div>
+                  {(pendingApprovals ?? 0) > 0 ? <Link className={styles.notificationItem} href="/lich-lam" onClick={() => setNotificationsOpen(false)}><span className={`${styles.notificationIcon} ${styles.notificationIconRed}`}><CalendarDays size={16} /></span><div><strong>{pendingApprovals} yêu cầu lịch/đơn từ chờ duyệt</strong><p>{navigationMetrics.pendingSchedules} lịch làm và {navigationMetrics.pendingWorkRequests} đơn từ đang chờ xử lý.</p><small>Mở Lịch &amp; chấm công</small></div></Link> : null}
+                  {(navigationMetrics.openTasks ?? 0) > 0 ? <Link className={styles.notificationItem} href="/cong-viec" onClick={() => setNotificationsOpen(false)}><span className={`${styles.notificationIcon} ${styles.notificationIconGreen}`}><ClipboardCheck size={16} /></span><div><strong>{navigationMetrics.openTasks} công việc đang mở</strong><p>Gồm công việc cần làm và đang thực hiện.</p><small>Mở Điều phối công việc</small></div></Link> : null}
+                  {(navigationMetrics.activeOrders ?? 0) > 0 ? <Link className={styles.notificationItem} href="/can-tin" onClick={() => setNotificationsOpen(false)}><span className={`${styles.notificationIcon} ${styles.notificationIconAmber}`}><UtensilsCrossed size={16} /></span><div><strong>{navigationMetrics.activeOrders} đơn căn tin đang xử lý</strong><p>Không gồm đơn đã hoàn tất, thanh toán hoặc hủy.</p><small>Mở Vận hành căn tin</small></div></Link> : null}
+                  {(navigationMetrics.unreadMessages ?? 0) > 0 ? <Link className={styles.notificationItem} href="/tro-chuyen" onClick={() => setNotificationsOpen(false)}><span className={`${styles.notificationIcon} ${styles.notificationIconBlue}`}><MessageCircle size={16} /></span><div><strong>{navigationMetrics.unreadMessages} tin nhắn chưa đọc</strong><p>Số lượng do API trò chuyện trả về.</p><small>Mở Trò chuyện</small></div></Link> : null}
+                  {navigationMetricsLoading ? <div className={styles.notificationEmpty}><span className={styles.notificationLoader} /><p>Đang tải dữ liệu mới nhất...</p></div> : null}
+                  {!navigationMetricsLoading && notificationCount === 0 && !navigationMetricsError ? <div className={styles.notificationEmpty}><CheckCircle2 size={18} /><p>Hiện không có nội dung cần xử lý.</p></div> : null}
+                  {navigationMetricsError ? <div className={styles.notificationWarning}><Bell size={17} /><p>Một phần dữ liệu chưa tải được. Các bộ đếm lỗi đã được ẩn.</p></div> : null}
                 </div>
               ) : null}
             </div>

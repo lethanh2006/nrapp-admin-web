@@ -3,7 +3,6 @@
 import {
   ArrowLeft,
   CheckCheck,
-  Circle,
   Info,
   MoreHorizontal,
   Paperclip,
@@ -27,6 +26,7 @@ import {
   type ApiUser,
 } from "@/lib/api/domain";
 import { gatewayApi } from "@/lib/api/gateway";
+import { notifyNavigationMetricsChanged } from "@/lib/navigation-metrics";
 import type { ChatMessage, Conversation } from "@/lib/types";
 import styles from "./tro-chuyen.module.css";
 
@@ -51,6 +51,7 @@ export default function ChatPage() {
   const [draft, setDraft] = useState("");
   const [conversationOpen, setConversationOpen] = useState(false);
   const [hint, setHint] = useState("");
+  const [chatLoadState, setChatLoadState] = useState<"loading" | "ready" | "error">("loading");
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const showHint = useCallback((message: string) => {
@@ -59,6 +60,7 @@ export default function ChatPage() {
   }, []);
 
   const loadChats = useCallback(async () => {
+    setChatLoadState("loading");
     try {
       const result = await gatewayApi<{ chats: ApiChatListItem[] }>("chat/chat/all");
       const rows = (Array.isArray(result.chats) ? result.chats : []).map(({ chat, user: wrapper }) => {
@@ -81,8 +83,10 @@ export default function ChatPage() {
       setConversationItems(rows);
       setSelectedId((current) => rows.some((item) => item.id === current) ? current : rows[0]?.id ?? "");
       setHint("");
+      setChatLoadState("ready");
     } catch (error) {
       setConversationItems([]);
+      setChatLoadState("error");
       showHint(error instanceof Error ? error.message : "Không thể tải danh sách trò chuyện.");
     }
   }, [showHint]);
@@ -114,6 +118,7 @@ export default function ChatPage() {
         }));
         setMessages((current) => ({ ...current, [selectedId]: rows }));
         setConversationItems((current) => current.map((item) => item.id === selectedId ? { ...item, unread: 0 } : item));
+        notifyNavigationMetricsChanged();
       })
       .catch((error) => showHint(error instanceof Error ? error.message : "Không thể tải tin nhắn."));
   }, [selectedId, showHint, user?.id]);
@@ -158,7 +163,7 @@ export default function ChatPage() {
         eyebrow="Kết nối nội bộ"
         title="Trò chuyện"
         description="Trao đổi nhanh với nhân sự và theo dõi hội thoại trong cùng một không gian làm việc."
-        actions={<Badge tone="emerald" dot>Đồng bộ qua NRApp Gateway</Badge>}
+        actions={<Badge tone={chatLoadState === "error" ? "red" : "slate"}>{chatLoadState === "loading" ? "Đang đồng bộ..." : chatLoadState === "error" ? "Không đồng bộ được" : `${conversationItems.length} cuộc trò chuyện`}</Badge>}
       />
 
       <section className={styles.chatShell}>
@@ -196,7 +201,7 @@ export default function ChatPage() {
           </div>
 
           <div className={styles.teamStatus}>
-            <span><Circle size={9} fill="currentColor" /> {conversationItems.length} hội thoại từ máy chủ</span>
+            <span>{chatLoadState === "ready" ? `${conversationItems.length} hội thoại từ máy chủ` : chatLoadState === "error" ? "Chưa tải được dữ liệu" : "Đang tải dữ liệu"}</span>
             <button onClick={() => void loadChats()}>Làm mới</button>
           </div>
         </aside>
