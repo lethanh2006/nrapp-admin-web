@@ -14,7 +14,7 @@ npm run dev
 
 Mở [http://localhost:3000](http://localhost:3000) và đăng nhập bằng tài khoản NRApp có vai trò `admin`. Giới hạn này bảo đảm mọi khu vực quản trị đều khớp quyền của các endpoint backend. Luồng đăng nhập gồm email/mật khẩu và OTP gửi qua email.
 
-Mặc định BFF kết nối tới `https://api.thanhlelmtp2006.id.vn/api`. Có thể đổi bằng biến môi trường `NRAPP_API_URL`; tài liệu endpoint nằm tại [NRApp Swagger](https://api.thanhlelmtp2006.id.vn/api-docs).
+Mặc định BFF kết nối tới `https://api-vps.thanhlelmtp2006.id.vn/api`. Có thể đổi bằng biến môi trường `NRAPP_API_URL`; tài liệu endpoint nằm tại [NRApp Swagger](https://api-vps.thanhlelmtp2006.id.vn/api-docs).
 
 ## Kiến trúc tích hợp
 
@@ -29,8 +29,8 @@ Mặc định BFF kết nối tới `https://api.thanhlelmtp2006.id.vn/api`. Có
 - `/dashboard`: KPI và hoạt động tổng hợp từ các API nghiệp vụ.
 - `/lich-lam`: duyệt lịch, duyệt đơn từ, tạo token QR và báo cáo chấm công.
 - `/cong-viec`: đọc, tạo và cập nhật trạng thái công việc.
-- `/can-tin`: đơn hàng, bếp, thực đơn, kho và thống kê.
-- `/nhan-su`: danh bạ, tạo tài khoản và cập nhật vai trò.
+- `/can-tin`: đơn tiền mặt, thực đơn, danh mục và bàn ăn theo đúng API canteen hiện có.
+- `/nhan-su`: danh bạ, tạo/xóa tài khoản và cập nhật hai vai trò `admin`/`user`.
 - `/tro-chuyen`: tải hội thoại, đọc và gửi tin nhắn văn bản.
 - `/tien-ich`: số liệu tổng hợp và trạng thái phản hồi của các API chính.
 - `/ho-so`: cập nhật tên/email, đăng xuất và xóa tài khoản.

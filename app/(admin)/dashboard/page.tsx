@@ -78,27 +78,25 @@ export default function DashboardPage() {
   const [attendance, setAttendance] = useState<ApiAttendance[]>([]);
 
   const loadDashboard = useCallback(async () => {
-    try {
-      const [usersResult, tasksResult, schedulesResult, ordersResult, attendanceResult] = await Promise.all([
+      const reportFrom = new Date();
+      reportFrom.setDate(reportFrom.getDate() - 6);
+      const [usersResult, tasksResult, schedulesResult, ordersResult, attendanceResult] = await Promise.allSettled([
         gatewayApi<{ users: ApiUser[] }>("user/user/all"),
         gatewayApi<ApiTaskPage>("todo?limit=100"),
         gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/pending"),
         gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
-        gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>("workschedule/attendance/report"),
+        gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>(`workschedule/attendance/report?from=${encodeURIComponent(reportFrom.toISOString())}&to=${encodeURIComponent(new Date().toISOString())}`),
       ]);
-      setEmployees((usersResult.users ?? []).map(toEmployee));
-      setTasks((tasksResult.tasks ?? []).map(toTask).filter((task): task is Task => task !== null));
-      setScheduleRequests(unwrapData(schedulesResult).map(toScheduleRequest));
-      setCanteenOrders((ordersResult.orders ?? []).map(toCanteenOrder).filter((order): order is CanteenOrder => order !== null));
-      setAttendance(unwrapData(attendanceResult));
-    } catch {
-      setEmployees([]); setTasks([]); setScheduleRequests([]); setCanteenOrders([]); setAttendance([]);
-    }
+      if (usersResult.status === "fulfilled") setEmployees((usersResult.value.users ?? []).map(toEmployee));
+      if (tasksResult.status === "fulfilled") setTasks((tasksResult.value.tasks ?? []).map(toTask).filter((task): task is Task => task !== null));
+      if (schedulesResult.status === "fulfilled") setScheduleRequests(unwrapData(schedulesResult.value).map(toScheduleRequest));
+      if (ordersResult.status === "fulfilled") setCanteenOrders((ordersResult.value.orders ?? []).map(toCanteenOrder).filter((order): order is CanteenOrder => order !== null));
+      if (attendanceResult.status === "fulfilled") setAttendance(unwrapData(attendanceResult.value));
   }, []);
 
   useEffect(() => { void Promise.resolve().then(loadDashboard); }, [loadDashboard]);
 
-  const activeEmployees = employees.filter((employee) => employee.status === "active").length;
+  const activeEmployees = employees.length;
   const openTasks = tasks.filter((task) => task.status !== "done").length;
   const pendingRequests = scheduleRequests.filter((request) => request.status === "pending");
   const activeOrders = canteenOrders.filter((order) => order.status !== "completed").length;

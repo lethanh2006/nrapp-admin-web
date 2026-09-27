@@ -9,7 +9,7 @@ export type ApiTask = {
 export type ApiTaskPage = { tasks: ApiTask[]; pagination?: { total: number } };
 export type ApiScheduleEntry = { date: string; type: "office" | "remote" | "day_off" | "leave"; period?: "full_day" | "morning" | "afternoon"; note?: string };
 export type ApiScheduleRequest = {
-  _id: string; employee_id: string; week_start: string; status: "pending" | "approved" | "rejected";
+  _id: string; employee_id: string; week_start?: string; month?: string; status: "pending" | "approved" | "rejected";
   submitted_at?: string; reject_reason?: string; employee?: ApiUser | null; entries?: ApiScheduleEntry[];
 };
 export type ApiWorkRequest = {
@@ -20,21 +20,20 @@ export type ApiWorkRequest = {
 export type ApiAttendance = { _id: string; employee_id: string; date: string; schedule_type: "office" | "remote"; check_in_at?: string; check_out_at?: string; source: "qr" | "schedule"; employee?: ApiUser | null };
 export type ApiPolicy = { registration_start: string; registration_end: string; locked?: boolean };
 export type ApiHeatmapRow = { _id: string; stats: Array<{ type: ApiScheduleEntry["type"]; count: number }> };
-export type ApiOrderStatus = "CREATED" | "CONFIRMED" | "COOKING" | "READY" | "COMPLETED" | "PAID" | "CANCELLED";
+export type ApiOrderStatus = "CREATED" | "COMPLETED" | "CANCELLED";
 export type ApiOrder = {
   _id: string; orderNumber: string; userId: string; tableId?: string | null;
-  items: Array<{ name: string; quantity: number; unitPrice: number }>;
-  finalAmount: number; status: ApiOrderStatus; paymentStatus: "PENDING" | "PAID" | "REFUNDED";
-  paymentMethod: string; createdAt: string;
+  items: Array<{ menuItemId?: string; name: string; quantity: number; unitPrice: number; note?: string }>;
+  totalAmount?: number; finalAmount: number; status: ApiOrderStatus; paymentStatus: "PENDING" | "PAID";
+  paymentMethod: "CASH"; createdAt: string; cancellationReason?: string;
 };
 export type ApiOrderPage = { orders: ApiOrder[]; pagination?: { total: number } };
 export type ApiMenuItem = { _id: string; categoryId: string; name: string; description?: string; price: number; imageUrl?: string; isAvailable: boolean; options?: Array<{ name: string; price: number }> };
 export type ApiCategory = { _id: string; name: string; description?: string; displayOrder?: number; isActive?: boolean };
 export type ApiMenuCatalog = { categories: ApiCategory[]; items: ApiMenuItem[] };
-export type ApiIngredient = { _id: string; name: string; unit: string; minimumThreshold: number; updatedAt?: string };
-export type ApiExpiryAlert = { batchId: string; ingredientId: string; ingredientName: string; unit: string; expiryDate: string; quantity: number; originalQuantity: number; supplier?: string };
-export type ApiTopDish = { menuItemId: string; name: string; salesCount: number; totalRevenue: number };
-export type ApiListResponse<T> = { success: true; data: T[]; meta?: { total: number } };
+export type ApiTableStatus = "empty" | "occupied" | "reserved";
+export type ApiTable = { _id: string; name: string; capacity: number; status: ApiTableStatus; createdAt?: string; updatedAt?: string };
+export type ApiListResponse<T> = { success: true; data: T[]; meta?: { page: number; limit: number; total: number; totalPages: number } };
 export type ApiChatRecord = { _id: string; users: string[]; latestMessage: { text: string; sender: string } | null; updatedAt: string; unseenCount: number };
 export type ApiChatListItem = { user: { user?: ApiUser } | ApiUser; chat: ApiChatRecord };
 export type ApiMessage = { _id: string; chatId: string; sender: string; text?: string; messageType: "text" | "image"; createdAt: string };
@@ -49,25 +48,30 @@ export function formatDateTime(value?: string) {
   return new Intl.DateTimeFormat("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(date);
 }
 
-const roleLabels: Record<string, string> = { admin: "Quản trị viên", manager: "Quản lý", chef: "Bếp trưởng", cashier: "Thu ngân", waiter: "Phục vụ", user: "Nhân viên", vip: "Khách VIP" };
+export const roleLabels: Record<string, string> = { admin: "Quản trị viên", user: "Nhân viên" };
 const tones: BadgeTone[] = ["red", "violet", "blue", "amber", "emerald", "cyan", "slate"];
 export function toEmployee(user: ApiUser, index = 0): Employee {
   const name = userName(user);
-  return { id: user._id, name, email: user.email ?? "Chưa cập nhật", phone: "Chưa cập nhật", role: roleLabels[user.role ?? ""] ?? user.role ?? "Thành viên", department: "Chưa có phòng ban", status: "active", joinedAt: "Chưa có dữ liệu", shift: "Chưa có dữ liệu", initial: initials(name), tone: tones[index % tones.length] };
+  const role = roleLabels[user.role ?? ""] ?? "Nhân viên";
+  return { id: user._id, name, email: user.email ?? "Chưa cập nhật", role, initial: initials(name), tone: tones[index % tones.length] };
 }
 export function toTask(task: ApiTask): Task | null {
   if (task.status === "cancelled") return null;
   const assignee = typeof task.assignedTo === "object" ? task.assignedTo : undefined;
   const name = userName(assignee);
-  return { id: task._id, title: task.title, description: task.description?.trim() || "Không có mô tả.", assignee: name, assigneeInitial: initials(name), department: "NRApp", due: formatDateTime(task.deadline), status: task.status, priority: task.priority, progress: task.status === "done" ? 100 : task.status === "in_progress" ? 50 : 0 };
+  const role = assignee?.role ? roleLabels[assignee.role] ?? assignee.role : "Chưa có dữ liệu vai trò";
+  return { id: task._id, title: task.title, description: task.description?.trim() || "Không có mô tả.", assignee: name, assigneeInitial: initials(name), assigneeRole: role, due: formatDateTime(task.deadline), status: task.status, priority: task.priority, progress: task.status === "done" ? 100 : task.status === "in_progress" ? 50 : 0 };
 }
 export function toScheduleRequest(request: ApiScheduleRequest): ScheduleRequest {
   const name = userName(request.employee);
   const working = (request.entries ?? []).filter((entry) => entry.type === "office" || entry.type === "remote").length;
-  return { id: request._id, employee: name, initial: initials(name), department: request.employee?.role ? roleLabels[request.employee.role] ?? request.employee.role : "Nhân sự", kind: "Đăng ký lịch tuần", schedule: `${formatDateTime(request.week_start).split(" ")[0]} · ${working} ngày làm`, submittedAt: formatDateTime(request.submitted_at), status: request.status };
+  const period = request.month
+    ? new Intl.DateTimeFormat("vi-VN", { month: "long", year: "numeric" }).format(new Date(`${request.month}-01T00:00:00+07:00`))
+    : formatDateTime(request.week_start).split(" ")[0];
+  return { id: request._id, employee: name, initial: initials(name), role: request.employee?.role ? roleLabels[request.employee.role] ?? request.employee.role : "Nhân sự", kind: "Đăng ký lịch tháng", schedule: `${period} · ${working} ngày làm`, submittedAt: formatDateTime(request.submitted_at), status: request.status };
 }
 export function toCanteenOrder(order: ApiOrder): CanteenOrder | null {
   if (order.status === "CANCELLED") return null;
-  const status: CanteenOrder["status"] = order.status === "CREATED" ? "new" : order.status === "CONFIRMED" ? "confirmed" : order.status === "COOKING" ? "cooking" : order.status === "READY" ? "ready" : "completed";
+  const status: CanteenOrder["status"] = order.status === "CREATED" ? "new" : "completed";
   return { id: order._id, code: order.orderNumber, table: order.tableId || "Mang đi", customer: order.userId, items: order.items.map((item) => `${item.name} × ${item.quantity}`), total: order.finalAmount, createdAt: formatDateTime(order.createdAt), status, payment: order.paymentStatus === "PAID" ? "paid" : "unpaid" };
 }

@@ -1,362 +1,182 @@
 "use client";
 
 import {
-  BriefcaseBusiness,
-  Building2,
-  CalendarDays,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
-  Clock3,
-  Download,
-  Eye,
-  FilterX,
-  IdCard,
+  KeyRound,
   Mail,
-  MapPin,
-  PencilLine,
-  Phone,
   Plus,
-  Save,
+  RefreshCw,
   Search,
   ShieldCheck,
-  UserCheck,
-  UserPlus,
-  UserRoundX,
+  Trash2,
+  UserRound,
   Users,
   X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Avatar } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import { initials, roleLabels, userName, type ApiUser } from "@/lib/api/domain";
 import { gatewayApi } from "@/lib/api/gateway";
-import { toEmployee, type ApiUser } from "@/lib/api/domain";
-import type { BadgeTone, Employee } from "@/lib/types";
 import styles from "./nhan-su.module.css";
 
-type ModalMode = "view" | "manage";
-type StatusFilter = Employee["status"] | "all";
+type AppRole = "admin" | "user";
+type Editor =
+  | { mode: "create"; username: string; email: string; password: string; role: AppRole }
+  | { mode: "role"; user: ApiUser; role: AppRole };
 
-const statusMeta: Record<Employee["status"], { label: string; tone: BadgeTone; helper: string }> = {
-  active: { label: "Tài khoản hiện có", tone: "emerald", helper: "Đã đồng bộ" },
-  offline: { label: "Chưa có trạng thái", tone: "slate", helper: "Chưa ghi nhận" },
-  leave: { label: "Đang nghỉ phép", tone: "amber", helper: "Theo lịch" },
-};
-
-const roleTone: Record<string, BadgeTone> = {
-  "Quản trị viên": "red",
-  "Quản lý": "violet",
-  "Bếp trưởng": "amber",
-  "Thu ngân": "emerald",
-  "Phục vụ": "cyan",
-  "Nhân viên": "blue",
-};
-
-const roleOptions = ["Quản trị viên", "Quản lý", "Bếp trưởng", "Thu ngân", "Phục vụ", "Nhân viên"];
-const roleValues: Record<string, string> = { "Quản trị viên": "admin", "Quản lý": "manager", "Bếp trưởng": "chef", "Thu ngân": "cashier", "Phục vụ": "waiter", "Nhân viên": "user" };
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .toLowerCase()
-    .trim();
+function roleOf(user: ApiUser): AppRole {
+  return user.role?.toLowerCase() === "admin" ? "admin" : "user";
 }
 
 export default function EmployeeDirectoryPage() {
-  const [directory, setDirectory] = useState<Employee[]>([]);
+  const [users, setUsers] = useState<ApiUser[]>([]);
   const [query, setQuery] = useState("");
-  const [departmentFilter, setDepartmentFilter] = useState("Tất cả");
-  const [roleFilter, setRoleFilter] = useState("Tất cả");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState<ModalMode>("view");
-  const [draft, setDraft] = useState<Employee | null>(null);
-  const [isCreating, setIsCreating] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [roleFilter, setRoleFilter] = useState<"all" | AppRole>("all");
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
-  const [newPassword, setNewPassword] = useState("");
+  const [error, setError] = useState("");
 
-  const loadDirectory = useCallback(async () => {
+  const loadUsers = useCallback(async () => {
+    setLoading(true);
+    setError("");
     try {
       const result = await gatewayApi<{ users: ApiUser[] }>("user/user/all");
-      setDirectory((Array.isArray(result.users) ? result.users : []).map(toEmployee));
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể tải danh bạ nhân sự."); }
+      setUsers(Array.isArray(result.users) ? result.users : []);
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Không thể tải danh sách tài khoản.");
+    } finally { setLoading(false); }
   }, []);
 
-  useEffect(() => { void Promise.resolve().then(loadDirectory); }, [loadDirectory]);
-
-  const departments = useMemo(() => ["Tất cả", ...Array.from(new Set(directory.map((employee) => employee.department)))], [directory]);
-  const roles = useMemo(() => ["Tất cả", ...Array.from(new Set(directory.map((employee) => employee.role)))], [directory]);
-
-  const filteredEmployees = useMemo(() => {
-    const normalizedQuery = normalizeSearch(query);
-    return directory
-      .filter((employee) => {
-        const searchable = normalizeSearch([employee.name, employee.id, employee.email, employee.phone, employee.department, employee.role].join(" "));
-        const matchesQuery = !normalizedQuery || searchable.includes(normalizedQuery);
-        const matchesDepartment = departmentFilter === "Tất cả" || employee.department === departmentFilter;
-        const matchesRole = roleFilter === "Tất cả" || employee.role === roleFilter;
-        const matchesStatus = statusFilter === "all" || employee.status === statusFilter;
-        return matchesQuery && matchesDepartment && matchesRole && matchesStatus;
-      })
-      .sort((left, right) => left.name.localeCompare(right.name, "vi"));
-  }, [departmentFilter, directory, query, roleFilter, statusFilter]);
-
-  const filtersActive = Boolean(query || departmentFilter !== "Tất cả" || roleFilter !== "Tất cả" || statusFilter !== "all");
-  const activeCount = directory.filter((employee) => employee.status === "active").length;
-  const roleCount = new Set(directory.map((employee) => employee.role)).size;
-
+  useEffect(() => { void Promise.resolve().then(loadUsers); }, [loadUsers]);
   useEffect(() => {
-    if (!modalOpen) return;
-    const previousOverflow = document.body.style.overflow;
+    if (!editor) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setEditor(null); };
+    const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setModalOpen(false);
-    };
-    window.addEventListener("keydown", handleEscape);
-    return () => {
-      document.body.style.overflow = previousOverflow;
-      window.removeEventListener("keydown", handleEscape);
-    };
-  }, [modalOpen]);
+    window.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
+  }, [editor]);
 
-  const resetFilters = () => {
-    setQuery("");
-    setDepartmentFilter("Tất cả");
-    setRoleFilter("Tất cả");
-    setStatusFilter("all");
-  };
-
-  const openProfile = (employee: Employee, mode: ModalMode = "view") => {
-    setDraft({ ...employee });
-    setModalMode(mode);
-    setIsCreating(false);
-    setFormError("");
-    setModalOpen(true);
-  };
-
-  const openCreate = () => {
-    setDraft({
-      id: "",
-      name: "",
-      email: "",
-      phone: "",
-      role: "Nhân viên",
-      department: "Chưa có phòng ban",
-      status: "active",
-      joinedAt: "Chưa có dữ liệu",
-      shift: "Chưa có dữ liệu",
-      initial: "NV",
-      tone: "blue",
+  const filteredUsers = useMemo(() => {
+    const keyword = query.trim().toLocaleLowerCase("vi");
+    return users.filter((user) => {
+      if (roleFilter !== "all" && roleOf(user) !== roleFilter) return false;
+      return !keyword || `${userName(user)} ${user.email ?? ""} ${user._id}`.toLocaleLowerCase("vi").includes(keyword);
     });
-    setModalMode("manage");
-    setIsCreating(true);
-    setFormError("");
-    setNewPassword("");
-    setModalOpen(true);
+  }, [query, roleFilter, users]);
+
+  const showNotice = (message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2800);
   };
 
-  const updateDraft = <K extends keyof Employee>(key: K, value: Employee[K]) => {
-    setDraft((current) => (current ? { ...current, [key]: value } : current));
-  };
-
-  const saveProfile = async () => {
-    if (!draft) return;
-    if (!draft.name.trim() || !draft.email.trim()) {
-      setFormError("Vui lòng nhập đầy đủ họ tên và email công việc.");
-      return;
-    }
-
-    if (isCreating && newPassword.length < 6) { setFormError("Mật khẩu cần có ít nhất 6 ký tự."); return; }
+  const save = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editor || busy) return;
+    setBusy("save");
     try {
-      if (isCreating) {
-        const result = await gatewayApi<{ userId: string }>("auth/register", { method: "POST", json: { username: draft.name.trim(), email: draft.email.trim().toLowerCase(), password: newPassword } });
-        const role = roleValues[draft.role] ?? "user";
-        if (role !== "user") await gatewayApi(`auth/users/${encodeURIComponent(result.userId)}/role`, { method: "PATCH", json: { role } });
-        setNotice(`Đã tạo tài khoản cho ${draft.name.trim()}.`);
+      if (editor.mode === "create") {
+        const username = editor.username.trim();
+        const email = editor.email.trim().toLowerCase();
+        if (!username || !/^\S+@\S+\.\S+$/.test(email) || editor.password.length < 6) throw new Error("Tên, email hợp lệ và mật khẩu từ 6 ký tự là bắt buộc.");
+        const result = await gatewayApi<{ userId: string }>("auth/register", { method: "POST", json: { username, email, password: editor.password } });
+        if (editor.role === "admin") {
+          await gatewayApi(`auth/users/${encodeURIComponent(result.userId)}/role`, { method: "PATCH", json: { role: "admin" } });
+        }
+        showNotice(`Đã tạo tài khoản ${username}.`);
       } else {
-        await gatewayApi(`auth/users/${encodeURIComponent(draft.id)}/role`, { method: "PATCH", json: { role: roleValues[draft.role] ?? "user" } });
-        setNotice(`Đã cập nhật vai trò của ${draft.name}.`);
+        await gatewayApi(`auth/users/${encodeURIComponent(editor.user._id)}/role`, { method: "PATCH", json: { role: editor.role } });
+        showNotice(`Đã cập nhật vai trò của ${userName(editor.user)}.`);
       }
-      await loadDirectory();
-      setModalOpen(false); setFormError("");
-    } catch (error) { setFormError(error instanceof Error ? error.message : "Không thể lưu tài khoản."); }
+      setEditor(null);
+      await loadUsers();
+    } catch (saveError) {
+      showNotice(saveError instanceof Error ? saveError.message : "Không thể lưu tài khoản.");
+    } finally { setBusy(""); }
   };
 
-  const toggleSelected = (id: string) => {
-    setSelectedIds((current) => (current.includes(id) ? current.filter((candidate) => candidate !== id) : [...current, id]));
+  const removeUser = async (user: ApiUser) => {
+    if (busy || !window.confirm(`Xóa vĩnh viễn tài khoản “${userName(user)}”? Thao tác này không thể hoàn tác.`)) return;
+    setBusy(user._id);
+    try {
+      await gatewayApi(`auth/users/${encodeURIComponent(user._id)}`, { method: "DELETE" });
+      await loadUsers();
+      showNotice(`Đã xóa tài khoản ${userName(user)}.`);
+    } catch (removeError) {
+      showNotice(removeError instanceof Error ? removeError.message : "Không thể xóa tài khoản.");
+    } finally { setBusy(""); }
   };
 
-  const toggleAllVisible = () => {
-    const visibleIds = filteredEmployees.map((employee) => employee.id);
-    const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.includes(id));
-    setSelectedIds((current) => (allSelected ? current.filter((id) => !visibleIds.includes(id)) : Array.from(new Set([...current, ...visibleIds]))));
-  };
+  const adminCount = users.filter((user) => roleOf(user) === "admin").length;
+  const completeEmailCount = users.filter((user) => Boolean(user.email)).length;
 
   return (
     <div className={styles.page}>
+      {notice ? <div className={styles.toast} role="status"><CheckCircle2 size={17} /><span>{notice}</span><button type="button" onClick={() => setNotice("")}><X size={14} /></button></div> : null}
       <PageHeader
-        eyebrow="Tổ chức & tài khoản"
-        title="Danh bạ nhân sự"
-        description="Tra cứu thông tin liên hệ, theo dõi trạng thái làm việc và quản lý vai trò truy cập của từng thành viên."
-        actions={
-          <>
-            <button className="button-secondary" type="button" onClick={() => void loadDirectory()}><Download size={16} /> Làm mới danh sách</button>
-            <button className="button-primary" type="button" onClick={openCreate}><Plus size={16} /> Thêm nhân sự</button>
-          </>
-        }
+        eyebrow="Tổ chức / Tài khoản"
+        title="Quản lý nhân sự"
+        description="Tạo tài khoản, tra cứu danh bạ và phân quyền theo đúng hai vai trò mà backend hỗ trợ."
+        actions={<><button className="button-secondary" type="button" onClick={() => void loadUsers()} disabled={loading}><RefreshCw size={16} /> Làm mới</button><button className="button-primary" type="button" onClick={() => setEditor({ mode: "create", username: "", email: "", password: "", role: "user" })}><Plus size={16} /> Tạo tài khoản</button></>}
       />
 
-      {notice ? (
-        <div className={styles.notice} role="status"><CheckCircle2 size={17} /><span>{notice}</span><button type="button" onClick={() => setNotice("")} aria-label="Đóng thông báo">Đóng</button></div>
-      ) : null}
+      {error ? <div className={styles.error} role="alert"><span>{error}</span><button type="button" onClick={() => void loadUsers()}>Thử lại</button></div> : null}
 
-      <section className={styles.statsGrid} aria-label="Tổng quan nhân sự">
-        <StatCard label="Tổng nhân sự" value={directory.length} helper="từ NRApp Gateway" icon={<Users size={18} />} tone="red" />
-        <StatCard label="Tài khoản đã đồng bộ" value={activeCount} helper={`${Math.round((activeCount / Math.max(directory.length, 1)) * 100)}% danh bạ`} icon={<UserCheck size={18} />} tone="emerald" />
-        <StatCard label="Vai trò hệ thống" value={roleCount} helper="theo dữ liệu xác thực" icon={<UserRoundX size={18} />} tone="amber" />
-        <StatCard label="Nhóm dữ liệu" value={departments.length - 1} helper="backend chưa có phòng ban" icon={<Building2 size={18} />} tone="violet" />
+      <section className={styles.stats} aria-label="Tổng quan tài khoản">
+        <StatCard label="Tổng tài khoản" value={users.length} helper="trả về từ User Service" icon={<Users size={18} />} tone="blue" />
+        <StatCard label="Quản trị viên" value={adminCount} helper="có quyền vào trang admin" icon={<ShieldCheck size={18} />} tone="red" />
+        <StatCard label="Nhân viên" value={users.length - adminCount} helper="vai trò người dùng chuẩn" icon={<UserRound size={18} />} tone="emerald" />
+        <StatCard label="Có email" value={`${completeEmailCount}/${users.length}`} helper="email công việc đã đồng bộ" icon={<Mail size={18} />} tone="violet" />
       </section>
 
-      <section className={`surface-card ${styles.directoryPanel}`}>
-        <div className={styles.panelHeader}>
-          <div><span>Danh sách thành viên</span><h2>Tất cả nhân sự</h2><p>Nhấp vào một hồ sơ để xem thông tin chi tiết.</p></div>
-          <div className={styles.syncState}><span /> Dữ liệu đã đồng bộ</div>
+      <section className={styles.directory}>
+        <header className={styles.directoryHeader}>
+          <div><small>DANH BẠ HỆ THỐNG</small><h2>Tài khoản NRApp</h2><p>Backend hiện cung cấp tên, email, mã tài khoản và vai trò.</p></div>
+          <Badge tone={error ? "red" : "emerald"} dot>{error ? "Mất đồng bộ" : `${users.length} tài khoản`}</Badge>
+        </header>
+        <div className={styles.toolbar}>
+          <label className={styles.search}><Search size={17} /><span className="sr-only">Tìm tài khoản</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm theo tên, email hoặc mã..." />{query ? <button type="button" onClick={() => setQuery("")}><X size={14} /></button> : null}</label>
+          <label className={styles.roleFilter}><ShieldCheck size={15} /><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value as "all" | AppRole)}><option value="all">Mọi vai trò</option><option value="admin">Quản trị viên</option><option value="user">Nhân viên</option></select></label>
+          <span className={styles.result}>{filteredUsers.length} kết quả</span>
         </div>
 
-        <div className={styles.filters}>
-          <label className={styles.searchField}>
-            <Search size={17} />
-            <span className="sr-only">Tìm kiếm nhân sự</span>
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Tìm tên, mã nhân sự, email..." />
-            {query ? <button type="button" onClick={() => setQuery("")} aria-label="Xóa từ khóa"><X size={14} /></button> : null}
-          </label>
-          <label className={styles.selectWrap}><span className="sr-only">Lọc phòng ban</span><select value={departmentFilter} onChange={(event) => setDepartmentFilter(event.target.value)}>{departments.map((department) => <option key={department}>{department}</option>)}</select></label>
-          <label className={styles.selectWrap}><span className="sr-only">Lọc vai trò</span><select value={roleFilter} onChange={(event) => setRoleFilter(event.target.value)}>{roles.map((role) => <option key={role}>{role}</option>)}</select></label>
-          <label className={styles.selectWrap}>
-            <span className="sr-only">Lọc trạng thái</span>
-            <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as StatusFilter)}>
-              <option value="all">Mọi trạng thái</option>
-              {Object.entries(statusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}
-            </select>
-          </label>
-          {filtersActive ? <button className={styles.clearFilters} type="button" onClick={resetFilters}><FilterX size={14} /> Xóa lọc</button> : null}
+        <div className={styles.userList}>
+          <div className={styles.userHead}><span>Tài khoản</span><span>Email</span><span>Vai trò</span><span>Mã người dùng</span><span>Thao tác</span></div>
+          {filteredUsers.map((user, index) => {
+            const role = roleOf(user);
+            const name = userName(user);
+            return <article className={styles.userRow} key={user._id}>
+              <div className={styles.identity}><Avatar initials={initials(name)} tone={index % 2 ? "blue" : "slate"} size="md" /><div><strong>{name}</strong><small>Tài khoản đã đồng bộ</small></div></div>
+              <div className={styles.email}><Mail size={14} /><span>{user.email || "Chưa có email"}</span></div>
+              <div><Badge tone={role === "admin" ? "red" : "blue"} dot>{roleLabels[role]}</Badge></div>
+              <code>{user._id}</code>
+              <div className={styles.actions}><button type="button" onClick={() => setEditor({ mode: "role", user, role })}><ShieldCheck size={14} /> Phân quyền</button><button className={styles.deleteButton} type="button" onClick={() => void removeUser(user)} disabled={busy === user._id} aria-label={`Xóa ${name}`}><Trash2 size={15} /></button></div>
+            </article>;
+          })}
+          {!filteredUsers.length ? <div className={styles.empty}><Users size={28} /><strong>Không tìm thấy tài khoản</strong><p>Kiểm tra từ khóa hoặc vai trò đang lọc.</p></div> : null}
         </div>
+      </section>
 
-        <div className={styles.resultBar}>
-          <span>Tìm thấy <strong>{filteredEmployees.length}</strong> nhân sự</span>
-          {selectedIds.length > 0 ? (
-            <div className={styles.bulkActions}><strong>{selectedIds.length} đã chọn</strong><button type="button" onClick={() => setSelectedIds([])}>Bỏ chọn</button></div>
-          ) : <span className={styles.resultHint}>Nguồn: NRApp Gateway</span>}
-        </div>
-
-        <div className={styles.employeeTable}>
-          <div className={`${styles.employeeRow} ${styles.tableHead}`}>
-            <label className={styles.checkbox}><input type="checkbox" checked={filteredEmployees.length > 0 && filteredEmployees.every((employee) => selectedIds.includes(employee.id))} onChange={toggleAllVisible} /><span /></label>
-            <span>Nhân sự</span><span>Liên hệ</span><span>Vai trò</span><span>Ca làm</span><span>Trạng thái</span><span>Ngày vào</span><span aria-label="Thao tác" />
+      {editor ? <div className="modal-backdrop" onMouseDown={() => setEditor(null)}><section className={`modal-card ${styles.modal}`} role="dialog" aria-modal="true" aria-labelledby="employee-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header className={styles.modalHeader}><div><span>{editor.mode === "create" ? <Plus size={19} /> : <ShieldCheck size={19} />}</span><div><small>{editor.mode === "create" ? "Tài khoản mới" : "Phân quyền truy cập"}</small><h2 id="employee-editor-title">{editor.mode === "create" ? "Tạo tài khoản nhân sự" : userName(editor.user)}</h2></div></div><button type="button" onClick={() => setEditor(null)}><X size={18} /></button></header>
+        <form onSubmit={(event) => void save(event)}>
+          <div className={styles.modalBody}>
+            {editor.mode === "create" ? <>
+              <label><span className="form-label">Tên tài khoản <em>*</em></span><div className={styles.inputIcon}><UserRound size={16} /><input autoFocus value={editor.username} onChange={(event) => setEditor({ ...editor, username: event.target.value })} placeholder="Nguyễn Văn A" required /></div></label>
+              <label><span className="form-label">Email <em>*</em></span><div className={styles.inputIcon}><Mail size={16} /><input type="email" value={editor.email} onChange={(event) => setEditor({ ...editor, email: event.target.value })} placeholder="name@company.vn" required /></div></label>
+              <label><span className="form-label">Mật khẩu ban đầu <em>*</em></span><div className={styles.inputIcon}><KeyRound size={16} /><input type="password" minLength={6} value={editor.password} onChange={(event) => setEditor({ ...editor, password: event.target.value })} placeholder="Tối thiểu 6 ký tự" required /></div></label>
+            </> : <div className={styles.accountSummary}><Avatar initials={initials(userName(editor.user))} size="lg" tone="blue" /><div><strong>{userName(editor.user)}</strong><span>{editor.user.email}</span><code>{editor.user._id}</code></div></div>}
+            <label><span className="form-label">Vai trò hệ thống</span><select className="select-field" value={editor.role} onChange={(event) => setEditor({ ...editor, role: event.target.value as AppRole })}><option value="user">Nhân viên</option><option value="admin">Quản trị viên</option></select></label>
+            <div className={styles.permissionNote}><ShieldCheck size={17} /><p><strong>Backend chỉ hỗ trợ `admin` và `user`.</strong><span>Quản trị viên có thể truy cập và thay đổi toàn bộ dữ liệu vận hành.</span></p></div>
           </div>
-          {filteredEmployees.map((employee) => {
-            const status = statusMeta[employee.status];
-            return (
-              <article className={styles.employeeRow} key={employee.id}>
-                <label className={styles.checkbox} onClick={(event) => event.stopPropagation()}><input type="checkbox" checked={selectedIds.includes(employee.id)} onChange={() => toggleSelected(employee.id)} /><span /></label>
-                <button className={styles.employeeIdentity} type="button" onClick={() => openProfile(employee)}>
-                  <Avatar initials={employee.initial} tone={employee.tone} size="md" />
-                  <span><strong>{employee.name}</strong><small>{employee.id} · {employee.department}</small></span>
-                </button>
-                <div className={styles.contactCell}><span><Mail size={12} /> {employee.email}</span><small><Phone size={11} /> {employee.phone}</small></div>
-                <div><Badge tone={roleTone[employee.role] ?? "slate"}>{employee.role}</Badge></div>
-                <div className={styles.shiftCell}><Clock3 size={13} /><span>{employee.shift}</span></div>
-                <div><Badge tone={status.tone} dot>{status.helper}</Badge></div>
-                <time className={styles.joinedAt}>{employee.joinedAt}</time>
-                <div className={styles.rowActions} onClick={(event) => event.stopPropagation()}>
-                  <button type="button" onClick={() => openProfile(employee)} title="Xem hồ sơ" aria-label={`Xem hồ sơ ${employee.name}`}><Eye size={15} /></button>
-                  <button type="button" onClick={() => openProfile(employee, "manage")} title="Quản lý hồ sơ" aria-label={`Quản lý hồ sơ ${employee.name}`}><ShieldCheck size={15} /></button>
-                </div>
-              </article>
-            );
-          })}
-          {filteredEmployees.length === 0 ? <div className={styles.emptyState}><Users size={28} /><strong>Không tìm thấy nhân sự</strong><p>Thử thay đổi từ khóa hoặc bộ lọc đang áp dụng.</p><button type="button" onClick={resetFilters}>Xóa bộ lọc</button></div> : null}
-        </div>
-
-        <div className={styles.mobileList}>
-          {filteredEmployees.map((employee) => {
-            const status = statusMeta[employee.status];
-            return (
-              <article className={styles.employeeCard} key={employee.id}>
-                <div className={styles.cardTop}>
-                  <Avatar initials={employee.initial} tone={employee.tone} size="lg" />
-                  <div><strong>{employee.name}</strong><span>{employee.id} · {employee.department}</span><div><Badge tone={roleTone[employee.role] ?? "slate"}>{employee.role}</Badge><Badge tone={status.tone} dot>{status.helper}</Badge></div></div>
-                  <button type="button" onClick={(event) => { event.stopPropagation(); openProfile(employee, "manage"); }} aria-label={`Quản lý ${employee.name}`}><PencilLine size={15} /></button>
-                </div>
-                <div className={styles.cardDetails}><span><Mail size={13} /> {employee.email}</span><span><Phone size={13} /> {employee.phone}</span><span><Clock3 size={13} /> {employee.shift}</span><span><CalendarDays size={13} /> Từ {employee.joinedAt}</span></div>
-                <button className={styles.cardFooter} type="button" onClick={() => openProfile(employee)}><span>Xem hồ sơ chi tiết</span><ChevronRight size={15} /></button>
-              </article>
-            );
-          })}
-          {filteredEmployees.length === 0 ? <div className={styles.mobileEmpty}><Users size={26} /><strong>Không có kết quả</strong><button type="button" onClick={resetFilters}>Xóa bộ lọc</button></div> : null}
-        </div>
-
-        <footer className={styles.pagination}>
-          <span>Hiển thị <strong>{filteredEmployees.length}</strong> trên {directory.length} nhân sự</span>
-          <div><button type="button" disabled aria-label="Trang trước"><ChevronLeft size={15} /></button><button className={styles.pageActive} type="button">1</button><button type="button" disabled={filteredEmployees.length < 8} aria-label="Trang sau"><ChevronRight size={15} /></button></div>
-        </footer>
-      </section>
-
-      {modalOpen && draft ? (
-        <div className="modal-backdrop" onMouseDown={() => setModalOpen(false)}>
-          <section className={`modal-card ${styles.profileModal}`} role="dialog" aria-modal="true" aria-labelledby="employee-modal-title" onMouseDown={(event) => event.stopPropagation()}>
-            <header className={styles.modalHeader}>
-              <div><span className={styles.modalIcon}>{isCreating ? <UserPlus size={19} /> : modalMode === "manage" ? <ShieldCheck size={19} /> : <IdCard size={19} />}</span><div><small>{isCreating ? "Hồ sơ mới" : modalMode === "manage" ? "Quản lý tài khoản" : "Thông tin nhân sự"}</small><h2 id="employee-modal-title">{isCreating ? "Thêm nhân sự" : draft.name}</h2></div></div>
-              <button type="button" onClick={() => setModalOpen(false)} aria-label="Đóng"><X size={18} /></button>
-            </header>
-
-            {modalMode === "view" ? (
-              <>
-                <div className={styles.profileHero}>
-                  <Avatar initials={draft.initial} tone={draft.tone} size="xl" />
-                  <div><h3>{draft.name}</h3><p>{draft.role} · {draft.department}</p><Badge tone={statusMeta[draft.status].tone} dot>{statusMeta[draft.status].label}</Badge></div>
-                </div>
-                <div className={styles.profileBody}>
-                  <section><h4>Thông tin liên hệ</h4><div className={styles.infoGrid}><div><span><Mail size={14} /></span><p><small>Email công việc</small><strong>{draft.email}</strong></p></div><div><span><Phone size={14} /></span><p><small>Số điện thoại</small><strong>{draft.phone}</strong></p></div><div><span><MapPin size={14} /></span><p><small>Nguồn hồ sơ</small><strong>NRApp Gateway</strong></p></div><div><span><Building2 size={14} /></span><p><small>Phòng ban</small><strong>{draft.department}</strong></p></div></div></section>
-                  <section><h4>Thông tin công việc</h4><div className={styles.workSummary}><div><small>Mã nhân sự</small><strong>{draft.id}</strong></div><div><small>Ngày gia nhập</small><strong>{draft.joinedAt}</strong></div><div><small>Ca làm mặc định</small><strong>{draft.shift}</strong></div><div><small>Vai trò hệ thống</small><strong>{draft.role}</strong></div></div></section>
-                  <div className={styles.permissionNote}><ShieldCheck size={18} /><div><strong>Quyền truy cập đang hoạt động</strong><p>Vai trò {draft.role.toLowerCase()} quyết định các phân hệ thành viên có thể truy cập.</p></div></div>
-                </div>
-                <footer className={styles.modalFooter}><button className="button-secondary" type="button" onClick={() => setModalOpen(false)}>Đóng</button><button className="button-primary" type="button" onClick={() => setModalMode("manage")}><PencilLine size={15} /> Quản lý hồ sơ</button></footer>
-              </>
-            ) : (
-              <>
-                <div className={styles.manageIntro}>
-                  <Avatar initials={draft.initial || "NV"} tone={draft.tone} size="lg" />
-                  <div><strong>{isCreating ? "Tạo tài khoản nhân sự" : draft.name}</strong><p>{isCreating ? "Nhập thông tin để thêm thành viên vào hệ thống." : `${draft.id} · Chỉnh sửa thông tin và quyền truy cập.`}</p></div>
-                </div>
-                <form className={styles.manageForm} onSubmit={(event) => { event.preventDefault(); void saveProfile(); }}>
-                  <div className={styles.formGrid}>
-                    <label className={styles.fullField}><span className="form-label">Họ và tên *</span><input className="field" value={draft.name} onChange={(event) => updateDraft("name", event.target.value)} placeholder="Nhập họ và tên" autoFocus disabled={!isCreating} /></label>
-                    <label><span className="form-label">Mã tài khoản</span><input className="field" value={draft.id || "Được tạo bởi Gateway"} readOnly /></label>
-                    <label><span className="form-label">Email công việc *</span><input className="field" type="email" value={draft.email} onChange={(event) => updateDraft("email", event.target.value)} placeholder="ten@hdg.vn" disabled={!isCreating} /></label>
-                    {isCreating ? <label><span className="form-label">Mật khẩu ban đầu *</span><input className="field" type="password" value={newPassword} onChange={(event) => setNewPassword(event.target.value)} autoComplete="new-password" /></label> : null}
-                    <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} disabled /></label>
-                    <label><span className="form-label">Phòng ban</span><input className="field" value={draft.department} disabled /></label>
-                    <label><span className="form-label">Vai trò hệ thống</span><select className="select-field" value={draft.role} onChange={(event) => updateDraft("role", event.target.value)}>{roleOptions.map((role) => <option key={role}>{role}</option>)}</select></label>
-                    <label><span className="form-label">Trạng thái</span><input className="field" value="Tài khoản đang tồn tại" disabled /></label>
-                    <label><span className="form-label">Ca làm mặc định</span><input className="field" value={draft.shift} disabled /></label>
-                    <label><span className="form-label">Ngày gia nhập</span><input className="field" value={draft.joinedAt} disabled /></label>
-                  </div>
-                  {formError ? <p className={styles.formError}>{formError}</p> : null}
-                  <div className={styles.securityHint}><BriefcaseBusiness size={17} /><p><strong>Lưu ý phân quyền</strong><span>Backend hiện chỉ cho quản trị viên đổi vai trò; các trường hồ sơ mở rộng chưa có API cập nhật.</span></p></div>
-                  <footer className={styles.modalFooter}><button className="button-secondary" type="button" onClick={() => isCreating ? setModalOpen(false) : setModalMode("view")}>{isCreating ? "Hủy" : "Quay lại"}</button><button className="button-primary" type="submit"><Save size={15} /> {isCreating ? "Thêm nhân sự" : "Lưu thay đổi"}</button></footer>
-                </form>
-              </>
-            )}
-          </section>
-        </div>
-      ) : null}
+          <footer className={styles.modalFooter}><button className="button-secondary" type="button" onClick={() => setEditor(null)}>Hủy</button><button className="button-primary" type="submit" disabled={busy === "save"}>{busy === "save" ? "Đang lưu..." : editor.mode === "create" ? "Tạo tài khoản" : "Lưu vai trò"}</button></footer>
+        </form>
+      </section></div> : null}
     </div>
   );
 }

@@ -49,9 +49,10 @@ export default function UtilitiesPage() {
   const [lastSync, setLastSync] = useState("");
 
   const loadOverview = useCallback(async () => {
+    const currentMonth = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());
     const results = await Promise.allSettled([
       gatewayApi<ApiTaskPage>("todo?limit=100"),
-      gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/all"),
+      gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>(`workschedule/schedule/all?month=${currentMonth}`),
       gatewayApi<{ users: ApiUser[] }>("user/user/all"),
       gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
       gatewayApi<{ chats: ApiChatListItem[] }>("chat/chat/all"),
@@ -61,7 +62,7 @@ export default function UtilitiesPage() {
       openTasks: tasksResult.status === "fulfilled" ? (tasksResult.value.tasks ?? []).filter((item) => !["done", "cancelled"].includes(item.status)).length : 0,
       pendingRequests: schedulesResult.status === "fulfilled" ? unwrapData(schedulesResult.value).filter((item) => item.status === "pending").length : 0,
       employees: usersResult.status === "fulfilled" ? (usersResult.value.users ?? []).length : 0,
-      activeOrders: ordersResult.status === "fulfilled" ? (ordersResult.value.orders ?? []).filter((item) => !["COMPLETED", "PAID", "CANCELLED"].includes(item.status)).length : 0,
+      activeOrders: ordersResult.status === "fulfilled" ? (ordersResult.value.orders ?? []).filter((item) => item.status === "CREATED").length : 0,
       unreadMessages: chatsResult.status === "fulfilled" ? (chatsResult.value.chats ?? []).reduce((total, item) => total + (item.chat.unseenCount ?? 0), 0) : 0,
     });
     setServices({
@@ -111,11 +112,11 @@ export default function UtilitiesPage() {
     },
     {
       title: "Vận hành căn tin",
-      description: "Kiểm soát luồng đơn hàng, trạng thái chế biến và doanh thu trong ngày.",
+      description: "Xác nhận đơn tiền mặt, quản lý thực đơn, danh mục và bàn ăn.",
       href: "/can-tin",
       icon: UtensilsCrossed,
       accent: "amber",
-      meta: `${activeOrders} đơn đang xử lý`,
+      meta: `${activeOrders} đơn chờ thanh toán`,
       tone: "amber",
     },
     {

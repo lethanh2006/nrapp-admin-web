@@ -68,22 +68,23 @@ export default function SchedulePage() {
   }, []);
 
   const loadSchedule = useCallback(async () => {
-    try {
-      const [scheduleResult, workResult, todayResult, reportResult, usersResult] = await Promise.all([
-        gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/all"),
-        gatewayApi<ApiWorkRequest[] | { data: ApiWorkRequest[] }>("workschedule/requests/admin"),
+    const currentMonth = new Date().toLocaleDateString("en-CA", { year: "numeric", month: "2-digit", timeZone: "Asia/Ho_Chi_Minh" });
+    const reportFrom = new Date();
+    reportFrom.setDate(reportFrom.getDate() - 6);
+    const [scheduleResult, workResult, todayResult, reportResult, usersResult] = await Promise.allSettled([
+        gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>(`workschedule/schedule/all?month=${currentMonth}`),
+        gatewayApi<ApiWorkRequest[] | { data: ApiWorkRequest[] }>(`workschedule/requests/admin?month=${currentMonth}`),
         gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>("workschedule/attendance/today"),
-        gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>("workschedule/attendance/report"),
+        gatewayApi<ApiAttendance[] | { data: ApiAttendance[] }>(`workschedule/attendance/report?from=${encodeURIComponent(reportFrom.toISOString())}&to=${encodeURIComponent(new Date().toISOString())}`),
         gatewayApi<{ users: ApiUser[] }>("user/user/all"),
       ]);
-      setRequests(unwrapData(scheduleResult).map(toScheduleRequest));
-      setWorkRequests(unwrapData(workResult));
-      setTodayAttendance(unwrapData(todayResult));
-      setAttendanceReport(unwrapData(reportResult));
-      setEmployeeCount(usersResult.users?.length ?? 0);
-    } catch (error) {
-      showNotice(error instanceof Error ? error.message : "Không thể tải dữ liệu lịch làm.");
-    }
+    if (scheduleResult.status === "fulfilled") setRequests(unwrapData(scheduleResult.value).map(toScheduleRequest));
+    if (workResult.status === "fulfilled") setWorkRequests(unwrapData(workResult.value));
+    if (todayResult.status === "fulfilled") setTodayAttendance(unwrapData(todayResult.value));
+    if (reportResult.status === "fulfilled") setAttendanceReport(unwrapData(reportResult.value));
+    if (usersResult.status === "fulfilled") setEmployeeCount(usersResult.value.users?.length ?? 0);
+    const failed = [scheduleResult, workResult, todayResult, reportResult, usersResult].filter((result) => result.status === "rejected");
+    if (failed.length) showNotice(`${failed.length}/5 nhóm dữ liệu chưa đồng bộ được. Các phần còn lại vẫn sử dụng bình thường.`);
   }, [showNotice]);
 
   useEffect(() => { void Promise.resolve().then(loadSchedule); }, [loadSchedule]);
@@ -232,7 +233,7 @@ export default function SchedulePage() {
               <div>
                 <p className={styles.kicker}>Hàng đợi phê duyệt</p>
                 <h2>Yêu cầu lịch làm</h2>
-                <p>Xác nhận lịch, đổi ca và hình thức làm việc của nhân sự.</p>
+                <p>Xác nhận đăng ký lịch làm theo tháng của nhân sự.</p>
               </div>
               {pendingCount ? <button className={styles.approveAll} onClick={() => void approveAll()}><CheckCheckIcon /> Duyệt tất cả</button> : null}
             </div>
@@ -253,10 +254,10 @@ export default function SchedulePage() {
                 const status = requestStatus(request.status);
                 return (
                   <article className={styles.requestItem} key={request.id}>
-                    <Avatar initials={request.initial} tone={request.department === "Căn tin" ? "amber" : request.department === "Nhân sự" ? "blue" : "slate"} size="md" />
+                    <Avatar initials={request.initial} tone={request.role === "Quản trị viên" ? "red" : "blue"} size="md" />
                     <div className={styles.requestPerson}>
                       <strong>{request.employee}</strong>
-                      <span>{request.department} · {request.id}</span>
+                      <span>{request.role} · {request.id}</span>
                     </div>
                     <div className={styles.requestDetail}>
                       <strong>{request.kind}</strong>

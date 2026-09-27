@@ -11,7 +11,6 @@ import {
   LockKeyhole,
   LogOut,
   Mail,
-  Phone,
   Save,
   ShieldCheck,
   Trash2,
@@ -31,8 +30,6 @@ import styles from "./ho-so.module.css";
 type Profile = {
   name: string;
   email: string;
-  phone: string;
-  department: string;
   position: string;
 };
 
@@ -42,8 +39,6 @@ export default function ProfilePage() {
   const initialProfile: Profile = {
     name: user?.name ?? "Người dùng",
     email: user?.email ?? "",
-    phone: "Backend chưa cung cấp",
-    department: "NRApp",
     position: getRoleLabel(user?.role),
   };
   const [tab, setTab] = useState<"profile" | "security" | "notifications">("profile");
@@ -219,7 +214,6 @@ export default function ProfilePage() {
             <div className={styles.infoList}>
               <InfoRow icon={<UserRound size={17} />} label="Họ và tên" value={profile.name} />
               <InfoRow icon={<Mail size={17} />} label="Địa chỉ email" value={profile.email} verified />
-              <InfoRow icon={<Phone size={17} />} label="Số điện thoại" value={profile.phone} />
               <InfoRow icon={<BriefcaseBusiness size={17} />} label="Vai trò hệ thống" value={profile.position} />
               <InfoRow icon={<ShieldCheck size={17} />} label="Nguồn dữ liệu" value="NRApp Gateway" />
             </div>
@@ -319,10 +313,6 @@ export default function ProfilePage() {
               <label><span className="form-label">Họ và tên</span><input className="field" value={draft.name} onChange={(event) => setDraft({ ...draft, name: event.target.value })} required autoFocus /></label>
               <div className={styles.formGrid}>
                 <label><span className="form-label">Email</span><input className="field" type="email" value={draft.email} onChange={(event) => setDraft({ ...draft, email: event.target.value })} required /></label>
-                <label><span className="form-label">Số điện thoại</span><input className="field" value={draft.phone} disabled /></label>
-              </div>
-              <div className={styles.formGrid}>
-                <label><span className="form-label">Hệ thống</span><input className="field" value={draft.department} disabled /></label>
                 <label><span className="form-label">Vai trò</span><input className="field" value={draft.position} disabled /></label>
               </div>
             </div>

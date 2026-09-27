@@ -14,4 +14,4 @@ export function normalizeSessionUser(raw: unknown): SessionUser | null {
   return { id, email, role: role as AdminAreaRole, name: name || username || email.split("@")[0], ...(username ? { username } : {}) };
 }
 export function getUserInitials(name: string) { const words = name.trim().split(/\s+/).filter(Boolean); return words.length ? words.slice(-2).map((word) => word[0]?.toLocaleUpperCase("vi") ?? "").join("") : "QT"; }
-export function getRoleLabel(role?: string) { return ({ admin: "Quản trị viên", manager: "Quản lý", chef: "Bếp trưởng", cashier: "Thu ngân", waiter: "Phục vụ" } as Record<string, string>)[role ?? ""] ?? "Nhân sự vận hành"; }
+export function getRoleLabel(role?: string) { return role === "admin" ? "Quản trị viên" : "Người dùng"; }

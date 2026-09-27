@@ -16,7 +16,7 @@ export type Task = {
   description: string;
   assignee: string;
   assigneeInitial: string;
-  department: string;
+  assigneeRole: string;
   due: string;
   status: TaskStatus;
   priority: TaskPriority;
@@ -27,12 +27,7 @@ export type Employee = {
   id: string;
   name: string;
   email: string;
-  phone: string;
   role: string;
-  department: string;
-  status: "active" | "offline" | "leave";
-  joinedAt: string;
-  shift: string;
   initial: string;
   tone: BadgeTone;
 };
@@ -41,7 +36,7 @@ export type ScheduleRequest = {
   id: string;
   employee: string;
   initial: string;
-  department: string;
+  role: string;
   kind: string;
   schedule: string;
   submittedAt: string;

@@ -6,9 +6,12 @@ type Context = { params: Promise<{ path: string[] }> };
 async function proxy(request: Request, context: Context) {
   try {
     const { path } = await context.params;
-    if (!path.length || !roots.has(path[0]) || path.some((part) => !/^[a-zA-Z0-9._-]+$/.test(part))) return jsonResponse({ message: "Đường dẫn API không hợp lệ." }, 400);
+    if (!path.length || !roots.has(path[0]) || path.some((part) => !/^[a-zA-Z0-9._-]+$/.test(part))) return jsonResponse({ code: "INVALID_API_PATH", message: "Đường dẫn API không hợp lệ." }, 400);
     const method = request.method as "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-    const body = method === "GET" || method === "DELETE" ? undefined : await request.json().catch(() => undefined);
+    const contentType = request.headers.get("content-type") ?? "";
+    const body = method === "GET" || method === "DELETE" || !contentType.includes("application/json")
+      ? undefined
+      : await request.json().catch(() => undefined);
     const payload = await sessionGatewayRequest<unknown>(`/${path.join("/")}${new URL(request.url).search}`, { method, body });
     return jsonResponse(payload);
   } catch (error) { return routeErrorResponse(error, "Không thể xử lý yêu cầu quản trị."); }

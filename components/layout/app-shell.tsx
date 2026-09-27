@@ -186,11 +186,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       gatewayApi<ApiTaskPage>("todo?status=todo&limit=1"),
       gatewayApi<ApiTaskPage>("todo?status=in_progress&limit=1"),
     ]).then((pages) => pages.reduce((total, page) => total + (page.pagination?.total ?? page.tasks?.length ?? 0), 0));
-    const activeOrdersRequest = Promise.all(
-      (["CREATED", "CONFIRMED", "COOKING", "READY"] as const).map((status) =>
-        gatewayApi<ApiOrderPage>(`canteen/orders?status=${status}&limit=1`),
-      ),
-    ).then((pages) => pages.reduce((total, page) => total + (page.pagination?.total ?? page.orders?.length ?? 0), 0));
+    const activeOrdersRequest = gatewayApi<ApiOrderPage>("canteen/orders?status=CREATED&limit=1")
+      .then((page) => page.pagination?.total ?? page.orders?.length ?? 0);
     const [tasksResult, schedulesResult, workRequestsResult, ordersResult, chatsResult] = await Promise.allSettled([
       openTasksRequest,
       gatewayApi<ApiScheduleRequest[] | { data: ApiScheduleRequest[] }>("workschedule/schedule/pending"),

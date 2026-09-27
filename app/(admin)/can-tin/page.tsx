@@ -1,518 +1,378 @@
 "use client";
 
 import {
-  ArrowRight,
-  BarChart3,
-  CalendarDays,
+  ArchiveRestore,
+  Ban,
   CheckCircle2,
-  ChefHat,
   CircleDollarSign,
-  Clock3,
-  CookingPot,
-  Download,
-  Flame,
-  Gauge,
-  Package,
-  PackageCheck,
+  Grid2X2,
+  ListFilter,
+  PencilLine,
   Plus,
   ReceiptText,
+  Redo2,
   RefreshCw,
   Search,
-  ShoppingBag,
   Soup,
-  TrendingUp,
-  TriangleAlert,
-  UtensilsCrossed,
-  Warehouse,
+  Table2,
+  Tags,
+  Trash2,
+  Undo2,
+  UsersRound,
+  X,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatCard } from "@/components/ui/stat-card";
+import {
+  formatDateTime,
+  type ApiCategory,
+  type ApiListResponse,
+  type ApiMenuCatalog,
+  type ApiMenuItem,
+  type ApiOrder,
+  type ApiOrderPage,
+  type ApiOrderStatus,
+  type ApiTable,
+  type ApiTableStatus,
+} from "@/lib/api/domain";
 import { gatewayApi } from "@/lib/api/gateway";
-import { toCanteenOrder, type ApiExpiryAlert, type ApiIngredient, type ApiListResponse, type ApiMenuCatalog, type ApiOrder, type ApiOrderPage, type ApiTopDish } from "@/lib/api/domain";
 import { notifyNavigationMetricsChanged } from "@/lib/navigation-metrics";
-import type { BadgeTone, CanteenOrder } from "@/lib/types";
+import type { BadgeTone } from "@/lib/types";
 import styles from "./can-tin.module.css";
 
-type CanteenTab = "orders" | "kitchen" | "menu" | "inventory" | "analytics";
-type OrderFilter = CanteenOrder["status"] | "all";
-type PaymentFilter = CanteenOrder["payment"] | "all";
-type StockFilter = "all" | "low" | "good";
+type Tab = "orders" | "menu" | "categories" | "tables";
+type Editor =
+  | { kind: "menu"; id?: string; name: string; description: string; categoryId: string; price: string; imageUrl: string; isAvailable: boolean }
+  | { kind: "category"; id?: string; name: string; description: string; displayOrder: string; isActive: boolean }
+  | { kind: "table"; id?: string; name: string; capacity: string };
 
-type MenuItem = {
-  id: string;
-  name: string;
-  category: string;
-  price: number;
-  sold: number;
-  available: boolean;
-  prep: string;
-  tone: "red" | "amber" | "emerald" | "violet" | "cyan";
+const money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND", maximumFractionDigits: 0 });
+const statusMeta: Record<ApiOrderStatus, { label: string; tone: BadgeTone }> = {
+  CREATED: { label: "Chờ thanh toán", tone: "amber" },
+  COMPLETED: { label: "Đã hoàn tất", tone: "emerald" },
+  CANCELLED: { label: "Đã hủy", tone: "red" },
+};
+const tableStatusMeta: Record<ApiTableStatus, { label: string; tone: BadgeTone }> = {
+  empty: { label: "Đang trống", tone: "emerald" },
+  occupied: { label: "Đang sử dụng", tone: "red" },
+  reserved: { label: "Đã đặt trước", tone: "amber" },
 };
 
-type InventoryItem = {
-  id: string;
-  name: string;
-  unit: string;
-  quantity: number;
-  capacity: number;
-  minimum: number;
-  updatedAt: string;
-  supplier: string;
-};
-
-const tabs: { value: CanteenTab; label: string; helper: string; icon: typeof ReceiptText }[] = [
-  { value: "orders", label: "Đơn hàng", helper: "Tiếp nhận & phục vụ", icon: ReceiptText },
-  { value: "kitchen", label: "Nhà bếp", helper: "Điều phối chế biến", icon: CookingPot },
-  { value: "menu", label: "Thực đơn", helper: "Món & giá bán", icon: UtensilsCrossed },
-  { value: "inventory", label: "Kho", helper: "Nguyên liệu", icon: Warehouse },
-  { value: "analytics", label: "Thống kê", helper: "Hiệu suất bán hàng", icon: BarChart3 },
-];
-
-const statusMeta: Record<
-  CanteenOrder["status"],
-  { label: string; shortLabel: string; tone: BadgeTone; next?: CanteenOrder["status"]; action?: string }
-> = {
-  new: { label: "Đơn mới", shortLabel: "Mới", tone: "red", next: "confirmed", action: "Xác nhận" },
-  confirmed: { label: "Đã xác nhận", shortLabel: "Chờ bếp", tone: "blue", next: "cooking", action: "Chuyển bếp" },
-  cooking: { label: "Đang chế biến", shortLabel: "Đang nấu", tone: "amber", next: "ready", action: "Báo xong" },
-  ready: { label: "Sẵn sàng giao", shortLabel: "Sẵn sàng", tone: "emerald", next: "completed", action: "Hoàn tất" },
-  completed: { label: "Đã hoàn tất", shortLabel: "Hoàn tất", tone: "slate" },
-};
-
-const money = new Intl.NumberFormat("vi-VN", { style: "currency", currency: "VND" });
-
-function normalizeSearch(value: string) {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/đ/g, "d")
-    .toLowerCase()
-    .trim();
+function errorMessage(error: unknown, fallback: string) {
+  return error instanceof Error && error.message ? error.message : fallback;
 }
 
-function revenueSeries(orders: ApiOrder[], range: "7 ngày" | "30 ngày" | "Quý này") {
-  const bucketCount = range === "7 ngày" ? 7 : range === "30 ngày" ? 4 : 3;
-  const bucketDays = range === "7 ngày" ? 1 : range === "30 ngày" ? 7 : 30;
-  const now = new Date();
-  now.setHours(23, 59, 59, 999);
-  const amounts = Array.from({ length: bucketCount }, (_, index) => {
-    const end = new Date(now);
-    end.setDate(now.getDate() - (bucketCount - index - 1) * bucketDays);
-    const start = new Date(end);
-    start.setDate(end.getDate() - bucketDays + 1);
-    start.setHours(0, 0, 0, 0);
-    const amount = orders.filter((order) => order.paymentStatus === "PAID" && new Date(order.createdAt) >= start && new Date(order.createdAt) <= end).reduce((sum, order) => sum + order.finalAmount, 0);
-    const label = range === "7 ngày" ? new Intl.DateTimeFormat("vi-VN", { weekday: "short" }).format(end) : range === "30 ngày" ? `Tuần ${index + 1}` : `T${new Intl.DateTimeFormat("vi-VN", { month: "2-digit" }).format(end)}`;
-    return { label, amount };
-  });
-  const maximum = Math.max(...amounts.map((item) => item.amount), 1);
-  return amounts.map((item) => ({ ...item, value: Math.round((item.amount / maximum) * 100) }));
-}
-
-export default function CanteenPage() {
-  const [activeTab, setActiveTab] = useState<CanteenTab>("orders");
-  const [orders, setOrders] = useState<CanteenOrder[]>([]);
-  const [apiOrders, setApiOrders] = useState<ApiOrder[]>([]);
-  const [orderQuery, setOrderQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<OrderFilter>("all");
-  const [paymentFilter, setPaymentFilter] = useState<PaymentFilter>("all");
-  const [menu, setMenu] = useState<MenuItem[]>([]);
-  const [menuQuery, setMenuQuery] = useState("");
-  const [menuCategory, setMenuCategory] = useState("Tất cả");
-  const [inventory, setInventory] = useState<InventoryItem[]>([]);
-  const [topDishes, setTopDishes] = useState<ApiTopDish[]>([]);
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
-  const [analyticsRange, setAnalyticsRange] = useState("7 ngày");
+export default function CanteenAdminPage() {
+  const [tab, setTab] = useState<Tab>("orders");
+  const [orders, setOrders] = useState<ApiOrder[]>([]);
+  const [menu, setMenu] = useState<ApiMenuItem[]>([]);
+  const [categories, setCategories] = useState<ApiCategory[]>([]);
+  const [tables, setTables] = useState<ApiTable[]>([]);
+  const [query, setQuery] = useState("");
+  const [orderStatus, setOrderStatus] = useState<"all" | ApiOrderStatus>("all");
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState("");
   const [notice, setNotice] = useState("");
+  const [error, setError] = useState("");
+
+  const showNotice = useCallback((message: string) => {
+    setNotice(message);
+    window.setTimeout(() => setNotice(""), 2800);
+  }, []);
 
   const loadCanteen = useCallback(async () => {
-    try {
-      const [orderResult, catalog, ingredientResult, alerts, dishes] = await Promise.all([
-        gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
-        gatewayApi<ApiMenuCatalog>("canteen/admin/menu"),
-        gatewayApi<ApiListResponse<ApiIngredient>>("canteen/inventory/ingredients?limit=100"),
-        gatewayApi<ApiExpiryAlert[]>("canteen/inventory/expiry-alerts"),
-        gatewayApi<ApiTopDish[]>("canteen/analytics/top-dishes?limit=10"),
-      ]);
-      const rawOrders = Array.isArray(orderResult.orders) ? orderResult.orders : [];
-      setApiOrders(rawOrders);
-      setOrders(rawOrders.map(toCanteenOrder).filter((order): order is CanteenOrder => order !== null));
-      const sales = new Map((Array.isArray(dishes) ? dishes : []).map((item) => [item.menuItemId, item.salesCount]));
-      const categoryNames = new Map((catalog.categories ?? []).map((item) => [item._id, item.name]));
-      const tones: MenuItem["tone"][] = ["red", "amber", "emerald", "violet", "cyan"];
-      setMenu((catalog.items ?? []).map((item, index) => ({ id: item._id, name: item.name, category: categoryNames.get(item.categoryId) ?? "Chưa phân loại", price: item.price, sold: sales.get(item._id) ?? 0, available: item.isAvailable, prep: "Chưa có dữ liệu", tone: tones[index % tones.length] })));
-      setTopDishes(Array.isArray(dishes) ? dishes : []);
-      const expiryRows = Array.isArray(alerts) ? alerts : [];
-      setInventory((ingredientResult.data ?? []).map((item) => {
-        const batches = expiryRows.filter((batch) => batch.ingredientId === item._id);
-        const quantity = batches.reduce((sum, batch) => sum + batch.quantity, 0);
-        const capacity = Math.max(batches.reduce((sum, batch) => sum + batch.originalQuantity, 0), item.minimumThreshold, 1);
-        return { id: item._id, name: item.name, unit: item.unit, quantity, capacity, minimum: item.minimumThreshold, updatedAt: item.updatedAt ? new Intl.DateTimeFormat("vi-VN").format(new Date(item.updatedAt)) : "Chưa cập nhật", supplier: batches.find((batch) => batch.supplier)?.supplier ?? "Chưa cập nhật" };
-      }));
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể tải dữ liệu căn tin."); }
+    setLoading(true);
+    setError("");
+    const [ordersResult, menuResult, categoriesResult, tablesResult] = await Promise.allSettled([
+      gatewayApi<ApiOrderPage>("canteen/orders?limit=100"),
+      gatewayApi<ApiMenuCatalog>("canteen/admin/menu"),
+      gatewayApi<ApiListResponse<ApiCategory>>("canteen/categories?limit=100&sortBy=displayOrder&sortOrder=asc"),
+      gatewayApi<ApiListResponse<ApiTable>>("canteen/tables?limit=100&sortBy=name&sortOrder=asc"),
+    ]);
+
+    if (ordersResult.status === "fulfilled") setOrders(Array.isArray(ordersResult.value.orders) ? ordersResult.value.orders : []);
+    if (menuResult.status === "fulfilled") {
+      setMenu(Array.isArray(menuResult.value.items) ? menuResult.value.items : []);
+      setCategories(Array.isArray(menuResult.value.categories) ? menuResult.value.categories : []);
+    } else if (categoriesResult.status === "fulfilled") {
+      setCategories(Array.isArray(categoriesResult.value.data) ? categoriesResult.value.data : []);
+    }
+    if (tablesResult.status === "fulfilled") setTables(Array.isArray(tablesResult.value.data) ? tablesResult.value.data : []);
+
+    const failed = [ordersResult, menuResult, categoriesResult, tablesResult].filter((result) => result.status === "rejected");
+    if (failed.length) {
+      const first = failed[0] as PromiseRejectedResult;
+      setError(`${failed.length}/4 nhóm dữ liệu chưa tải được. ${errorMessage(first.reason, "Vui lòng thử lại.")}`);
+    }
+    setLoading(false);
   }, []);
 
   useEffect(() => { void Promise.resolve().then(loadCanteen); }, [loadCanteen]);
 
-  const visibleOrders = useMemo(() => {
-    const query = normalizeSearch(orderQuery);
-    return orders.filter((order) => {
-      const matchesQuery = !query || normalizeSearch([order.code, order.customer, order.table, ...order.items].join(" ")).includes(query);
-      const matchesStatus = statusFilter === "all" || order.status === statusFilter;
-      const matchesPayment = paymentFilter === "all" || order.payment === paymentFilter;
-      return matchesQuery && matchesStatus && matchesPayment;
-    });
-  }, [orderQuery, orders, paymentFilter, statusFilter]);
+  useEffect(() => {
+    if (!editor) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setEditor(null); };
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", close);
+    return () => { document.body.style.overflow = previous; window.removeEventListener("keydown", close); };
+  }, [editor]);
 
-  const categories = useMemo(() => ["Tất cả", ...Array.from(new Set(menu.map((item) => item.category)))], [menu]);
-  const visibleMenu = useMemo(() => {
-    const query = normalizeSearch(menuQuery);
-    return menu.filter((item) => {
-      const matchesQuery = !query || normalizeSearch(`${item.name} ${item.category}`).includes(query);
-      return matchesQuery && (menuCategory === "Tất cả" || item.category === menuCategory);
-    });
-  }, [menu, menuCategory, menuQuery]);
+  const categoryById = useMemo(() => new Map(categories.map((category) => [category._id, category])), [categories]);
+  const tableById = useMemo(() => new Map(tables.map((table) => [table._id, table])), [tables]);
+  const normalizedQuery = query.trim().toLocaleLowerCase("vi");
+  const filteredOrders = orders.filter((order) => {
+    const matchesStatus = orderStatus === "all" || order.status === orderStatus;
+    const haystack = `${order.orderNumber} ${order.userId} ${order.items.map((item) => item.name).join(" ")}`.toLocaleLowerCase("vi");
+    return matchesStatus && (!normalizedQuery || haystack.includes(normalizedQuery));
+  });
+  const filteredMenu = menu.filter((item) => !normalizedQuery || `${item.name} ${item.description ?? ""} ${categoryById.get(item.categoryId)?.name ?? ""}`.toLocaleLowerCase("vi").includes(normalizedQuery));
+  const filteredCategories = categories.filter((item) => !normalizedQuery || `${item.name} ${item.description ?? ""}`.toLocaleLowerCase("vi").includes(normalizedQuery));
+  const filteredTables = tables.filter((item) => !normalizedQuery || item.name.toLocaleLowerCase("vi").includes(normalizedQuery));
 
-  const visibleInventory = useMemo(
-    () => inventory.filter((item) => stockFilter === "all" || (stockFilter === "low" ? item.quantity <= item.minimum : item.quantity > item.minimum)),
-    [inventory, stockFilter],
-  );
-
-  const chartData: { [range: string]: Array<{ label: string; amount: number; value: number }> } = useMemo(() => ({
-    "7 ngày": revenueSeries(apiOrders, "7 ngày"),
-    "30 ngày": revenueSeries(apiOrders, "30 ngày"),
-    "Quý này": revenueSeries(apiOrders, "Quý này"),
-  }), [apiOrders]);
-
-  const updateOrderStatus = async (order: CanteenOrder, next: CanteenOrder["status"]) => {
-    const endpoint = next === "confirmed" ? `canteen/orders/${order.id}/confirm` : next === "cooking" ? `canteen/kitchen/orders/${order.id}/cooking` : next === "ready" ? `canteen/kitchen/orders/${order.id}/ready` : `canteen/orders/${order.id}/complete`;
+  const mutate = async (key: string, action: () => Promise<unknown>, success: string) => {
+    if (busy) return;
+    setBusy(key);
     try {
-      await gatewayApi(endpoint, { method: "PATCH" });
+      await action();
       await loadCanteen();
       notifyNavigationMetricsChanged();
-      setNotice(`${order.code} đã chuyển sang “${statusMeta[next].label}”.`);
-    } catch (error) { setNotice(error instanceof Error ? error.message : "Không thể cập nhật đơn hàng."); }
+      showNotice(success);
+    } catch (mutationError) {
+      showNotice(errorMessage(mutationError, "Không thể hoàn tất thao tác."));
+    } finally { setBusy(""); }
   };
 
-  const receiveNextOrder = async () => {
-    try { await gatewayApi("canteen/kitchen/next", { method: "POST" }); await loadCanteen(); notifyNavigationMetricsChanged(); setNotice("Đã nhận đơn ưu tiên tiếp theo."); }
-    catch (error) { setNotice(error instanceof Error ? error.message : "Không thể nhận đơn tiếp theo."); }
+  const settleOrder = (order: ApiOrder) => void mutate(
+    `order-${order._id}`,
+    () => gatewayApi(`canteen/orders/${encodeURIComponent(order._id)}/payment/cash`, { method: "PATCH" }),
+    `Đã xác nhận thu tiền và hoàn tất ${order.orderNumber}.`,
+  );
+
+  const cancelOrder = (order: ApiOrder) => {
+    const reason = window.prompt(`Lý do hủy ${order.orderNumber}:`);
+    if (!reason?.trim()) return;
+    void mutate(
+      `order-${order._id}`,
+      () => gatewayApi(`canteen/orders/${encodeURIComponent(order._id)}/cancel`, { method: "PATCH", json: { reason: reason.trim() } }),
+      `Đã hủy ${order.orderNumber}.`,
+    );
   };
 
-  const toggleMenuItem = async (id: string) => {
-    const item = menu.find((candidate) => candidate.id === id);
-    if (!item) return;
-    try { await gatewayApi(`canteen/admin/menu/${encodeURIComponent(id)}`, { method: "PUT", json: { isAvailable: !item.available } }); await loadCanteen(); setNotice(`${item.name} đã ${item.available ? "tạm ngưng" : "mở lại"} trên thực đơn.`); }
-    catch (error) { setNotice(error instanceof Error ? error.message : "Không thể cập nhật món ăn."); }
+  const toggleMenu = (item: ApiMenuItem) => void mutate(
+    `menu-${item._id}`,
+    () => gatewayApi(`canteen/admin/menu/${encodeURIComponent(item._id)}`, { method: "PUT", json: { isAvailable: !item.isAvailable } }),
+    item.isAvailable ? `Đã tạm ẩn ${item.name}.` : `Đã mở bán ${item.name}.`,
+  );
+
+  const removeMenu = (item: ApiMenuItem) => {
+    if (!window.confirm(`Xóa món “${item.name}”? Bạn có thể dùng Hoàn tác ngay sau đó.`)) return;
+    void mutate(`menu-${item._id}`, () => gatewayApi(`canteen/admin/menu/${encodeURIComponent(item._id)}`, { method: "DELETE" }), `Đã xóa ${item.name}.`);
   };
 
-  const restock = (item: InventoryItem) => {
-    setNotice(`API nhập lô cần số lượng, hạn dùng và giá vốn cho ${item.name}; hãy dùng biểu mẫu nhập kho đầy đủ.`);
+  const openMenuEditor = (item?: ApiMenuItem) => setEditor({
+    kind: "menu",
+    ...(item ? { id: item._id } : {}),
+    name: item?.name ?? "",
+    description: item?.description ?? "",
+    categoryId: item?.categoryId ?? categories[0]?._id ?? "",
+    price: item ? String(item.price) : "",
+    imageUrl: item?.imageUrl ?? "",
+    isAvailable: item?.isAvailable ?? true,
+  });
+
+  const openCategoryEditor = (category?: ApiCategory) => setEditor({
+    kind: "category",
+    ...(category ? { id: category._id } : {}),
+    name: category?.name ?? "",
+    description: category?.description ?? "",
+    displayOrder: String(category?.displayOrder ?? categories.length + 1),
+    isActive: category?.isActive ?? true,
+  });
+
+  const openTableEditor = (table?: ApiTable) => setEditor({
+    kind: "table",
+    ...(table ? { id: table._id } : {}),
+    name: table?.name ?? "",
+    capacity: String(table?.capacity ?? 4),
+  });
+
+  const saveEditor = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!editor || busy) return;
+    const key = `editor-${editor.kind}`;
+    setBusy(key);
+    try {
+      if (editor.kind === "menu") {
+        const price = Number(editor.price);
+        if (!editor.name.trim() || !editor.categoryId || !Number.isSafeInteger(price) || price < 0) throw new Error("Tên món, danh mục và giá nguyên không âm là bắt buộc.");
+        const body = { categoryId: editor.categoryId, name: editor.name.trim(), description: editor.description.trim() || undefined, price, imageUrl: editor.imageUrl.trim() || undefined, isAvailable: editor.isAvailable };
+        await gatewayApi(editor.id ? `canteen/admin/menu/${encodeURIComponent(editor.id)}` : "canteen/admin/menu", { method: editor.id ? "PUT" : "POST", json: body });
+      } else if (editor.kind === "category") {
+        const displayOrder = Number(editor.displayOrder);
+        if (!editor.name.trim() || !editor.description.trim() || !Number.isInteger(displayOrder) || displayOrder < 0) throw new Error("Tên, mô tả và thứ tự hiển thị hợp lệ là bắt buộc.");
+        const body = { name: editor.name.trim(), description: editor.description.trim(), displayOrder, isActive: editor.isActive };
+        await gatewayApi(editor.id ? `canteen/categories/${encodeURIComponent(editor.id)}` : "canteen/categories", { method: editor.id ? "PATCH" : "POST", json: body });
+      } else {
+        const capacity = Number(editor.capacity);
+        if (!editor.name.trim() || !Number.isInteger(capacity) || capacity < 1) throw new Error("Tên bàn và sức chứa từ 1 người là bắt buộc.");
+        await gatewayApi(editor.id ? `canteen/tables/${encodeURIComponent(editor.id)}` : "canteen/tables", { method: editor.id ? "PATCH" : "POST", json: { name: editor.name.trim(), capacity } });
+      }
+      const editing = Boolean(editor.id);
+      const label = editor.kind === "menu" ? "món ăn" : editor.kind === "category" ? "danh mục" : "bàn ăn";
+      setEditor(null);
+      await loadCanteen();
+      showNotice(`Đã ${editing ? "cập nhật" : "tạo"} ${label}.`);
+    } catch (saveError) {
+      showNotice(errorMessage(saveError, "Không thể lưu dữ liệu."));
+    } finally { setBusy(""); }
   };
 
-  const resetOrderFilters = () => {
-    setOrderQuery("");
-    setStatusFilter("all");
-    setPaymentFilter("all");
+  const removeCategory = (category: ApiCategory) => {
+    if (!window.confirm(`Xóa danh mục “${category.name}”? Backend sẽ từ chối nếu danh mục còn món ăn.`)) return;
+    void mutate(`category-${category._id}`, () => gatewayApi(`canteen/categories/${encodeURIComponent(category._id)}`, { method: "DELETE" }), `Đã xóa danh mục ${category.name}.`);
   };
 
-  const cookingCount = orders.filter((order) => order.status === "cooking").length;
-  const newCount = orders.filter((order) => order.status === "new" || order.status === "confirmed").length;
-  const lowStockCount = inventory.filter((item) => item.quantity <= item.minimum).length;
-  const revenue = orders.filter((order) => order.payment === "paid").reduce((sum, order) => sum + order.total, 0);
-  const completedCount = apiOrders.filter((order) => order.status === "COMPLETED" || order.status === "PAID").length;
-  const cancelledCount = apiOrders.filter((order) => order.status === "CANCELLED").length;
-  const completionRate = Math.round((completedCount / Math.max(apiOrders.length, 1)) * 100);
-  const averageOrder = Math.round(apiOrders.reduce((sum, order) => sum + order.finalAmount, 0) / Math.max(apiOrders.length, 1));
-  const timeSlots = [[7, 9], [9, 11], [11, 13], [13, 15]].map(([start, end]) => ({ start, end, count: apiOrders.filter((order) => { const hour = new Date(order.createdAt).getHours(); return hour >= start && hour < end; }).length }));
-  const maxSlotCount = Math.max(...timeSlots.map((slot) => slot.count), 1);
+  const changeTableStatus = (table: ApiTable, status: ApiTableStatus) => void mutate(
+    `table-${table._id}`,
+    () => gatewayApi(`canteen/tables/${encodeURIComponent(table._id)}/status`, { method: "PATCH", json: { status } }),
+    `Đã cập nhật trạng thái ${table.name}.`,
+  );
+
+  const removeTable = (table: ApiTable) => {
+    if (!window.confirm(`Xóa ${table.name}? Chỉ bàn đang trống mới có thể xóa.`)) return;
+    void mutate(`table-${table._id}`, () => gatewayApi(`canteen/tables/${encodeURIComponent(table._id)}`, { method: "DELETE" }), `Đã xóa ${table.name}.`);
+  };
+
+  const pendingOrders = orders.filter((order) => order.status === "CREATED").length;
+  const completedOrders = orders.filter((order) => order.status === "COMPLETED").length;
+  const revenue = orders.filter((order) => order.paymentStatus === "PAID").reduce((sum, order) => sum + order.finalAmount, 0);
+  const occupiedTables = tables.filter((table) => table.status !== "empty").length;
+
+  const tabs: Array<{ value: Tab; label: string; count: number; icon: typeof ReceiptText }> = [
+    { value: "orders", label: "Đơn hàng", count: orders.length, icon: ReceiptText },
+    { value: "menu", label: "Thực đơn", count: menu.length, icon: Soup },
+    { value: "categories", label: "Danh mục", count: categories.length, icon: Tags },
+    { value: "tables", label: "Bàn ăn", count: tables.length, icon: Table2 },
+  ];
 
   return (
     <div className={styles.page}>
+      {notice ? <div className={styles.toast} role="status"><CheckCircle2 size={17} /><span>{notice}</span><button type="button" onClick={() => setNotice("")}><X size={14} /></button></div> : null}
       <PageHeader
-        eyebrow="Trung tâm vận hành"
+        eyebrow="Căn tin / Vận hành"
         title="Quản lý căn tin"
-        description="Theo dõi xuyên suốt từ lúc tiếp nhận đơn đến chế biến, giao món và kiểm soát nguyên liệu trong ngày."
-        actions={
-          <>
-            <button className="button-secondary" type="button" onClick={() => void loadCanteen()}>
-              <Download size={16} /> Làm mới dữ liệu
-            </button>
-            <button className="button-primary" type="button" onClick={() => setActiveTab("menu")}>
-              <Plus size={16} /> Quản lý thực đơn
-            </button>
-          </>
-        }
+        description="Theo dõi đơn tiền mặt, thực đơn, danh mục và bàn ăn đúng theo dữ liệu backend hiện có."
+        actions={<button className="button-secondary" type="button" onClick={() => void loadCanteen()} disabled={loading}><RefreshCw size={16} /> {loading ? "Đang đồng bộ" : "Làm mới"}</button>}
       />
 
-      {notice ? (
-        <div className={styles.notice} role="status">
-          <CheckCircle2 size={17} />
-          <span>{notice}</span>
-          <button type="button" onClick={() => setNotice("")} aria-label="Đóng thông báo">Đóng</button>
-        </div>
-      ) : null}
+      {error ? <div className={styles.errorBanner} role="alert"><Ban size={17} /><span>{error}</span><button type="button" onClick={() => void loadCanteen()}>Thử lại</button></div> : null}
 
-      <section className={styles.statsGrid} aria-label="Tổng quan căn tin hôm nay">
-        <StatCard label="Đơn hiện có" value={orders.length} helper="theo dữ liệu máy chủ" icon={<ShoppingBag size={18} />} tone="red" />
-        <StatCard label="Đang chờ xử lý" value={newCount} helper="cần được tiếp nhận" icon={<Clock3 size={18} />} tone="amber" />
-        <StatCard label="Đang chế biến" value={cookingCount} helper="theo trạng thái máy chủ" icon={<ChefHat size={18} />} tone="blue" />
-        <StatCard label="Doanh thu dữ liệu" value={money.format(revenue)} helper="các đơn đã thanh toán" icon={<CircleDollarSign size={18} />} tone="emerald" />
+      <section className={styles.statsGrid} aria-label="Tổng quan căn tin">
+        <StatCard label="Đơn chờ xử lý" value={pendingOrders} helper="cần thu tiền hoặc hủy" icon={<ReceiptText size={18} />} tone="amber" />
+        <StatCard label="Đơn hoàn tất" value={completedOrders} helper="trong dữ liệu đang tải" icon={<CheckCircle2 size={18} />} tone="emerald" />
+        <StatCard label="Doanh thu đã thu" value={money.format(revenue)} helper="chỉ tính đơn PAID" icon={<CircleDollarSign size={18} />} tone="blue" />
+        <StatCard label="Bàn đang dùng" value={`${occupiedTables}/${tables.length}`} helper="đang dùng hoặc đặt trước" icon={<Table2 size={18} />} tone="violet" />
       </section>
 
-      <nav className={styles.tabBar} aria-label="Phân hệ căn tin">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          const active = activeTab === tab.value;
-          return (
-            <button
-              className={`${styles.tabButton} ${active ? styles.tabButtonActive : ""}`}
-              type="button"
-              key={tab.value}
-              onClick={() => setActiveTab(tab.value)}
-              aria-current={active ? "page" : undefined}
-            >
-              <span className={styles.tabIcon}><Icon size={18} /></span>
-              <span><strong>{tab.label}</strong><small>{tab.helper}</small></span>
-              {tab.value === "orders" && newCount > 0 ? <b>{newCount}</b> : null}
-              {tab.value === "inventory" && lowStockCount > 0 ? <b>{lowStockCount}</b> : null}
-            </button>
-          );
-        })}
-      </nav>
+      <section className={styles.workspace}>
+        <nav className={styles.tabs} aria-label="Nghiệp vụ căn tin">
+          {tabs.map((item) => {
+            const Icon = item.icon;
+            return <button type="button" className={tab === item.value ? styles.tabActive : ""} onClick={() => { setTab(item.value); setQuery(""); }} key={item.value}><Icon size={17} /><span>{item.label}</span><b>{item.count}</b></button>;
+          })}
+        </nav>
 
-      {activeTab === "orders" ? (
-        <section className={`surface-card ${styles.panel}`}>
-          <div className={styles.panelHeader}>
-            <div>
-              <span className={styles.panelEyebrow}>Dòng đơn hàng trực tiếp</span>
-              <h2>Đơn hàng trong ca</h2>
-              <p>Cập nhật trạng thái để đồng bộ ngay với quầy phục vụ và nhà bếp.</p>
-            </div>
-            <div className={styles.liveLabel}><span /> Đang cập nhật</div>
-          </div>
+        <div className={styles.toolbar}>
+          <label className={styles.search}><Search size={17} /><span className="sr-only">Tìm kiếm</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder={tab === "orders" ? "Tìm mã đơn, người đặt hoặc món..." : `Tìm trong ${tabs.find((item) => item.value === tab)?.label.toLowerCase()}...`} />{query ? <button type="button" onClick={() => setQuery("")} aria-label="Xóa tìm kiếm"><X size={14} /></button> : null}</label>
+          {tab === "orders" ? <label className={styles.select}><ListFilter size={15} /><select value={orderStatus} onChange={(event) => setOrderStatus(event.target.value as "all" | ApiOrderStatus)}><option value="all">Mọi trạng thái</option>{Object.entries(statusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}</select></label> : null}
+          {tab === "menu" ? <div className={styles.toolbarActions}><button type="button" onClick={() => void mutate("undo", () => gatewayApi("canteen/admin/menu/undo", { method: "POST" }), "Đã hoàn tác thay đổi gần nhất.")}><Undo2 size={15} /> Hoàn tác</button><button type="button" onClick={() => void mutate("redo", () => gatewayApi("canteen/admin/menu/redo", { method: "POST" }), "Đã làm lại thay đổi gần nhất.")}><Redo2 size={15} /> Làm lại</button><button className={styles.primaryAction} type="button" onClick={() => openMenuEditor()} disabled={!categories.length}><Plus size={15} /> Thêm món</button></div> : null}
+          {tab === "categories" ? <button className={styles.primaryAction} type="button" onClick={() => openCategoryEditor()}><Plus size={15} /> Thêm danh mục</button> : null}
+          {tab === "tables" ? <button className={styles.primaryAction} type="button" onClick={() => openTableEditor()}><Plus size={15} /> Thêm bàn</button> : null}
+        </div>
 
-          <div className={styles.toolbar}>
-            <label className={styles.searchField}>
-              <Search size={17} />
-              <span className="sr-only">Tìm đơn hàng</span>
-              <input value={orderQuery} onChange={(event) => setOrderQuery(event.target.value)} placeholder="Mã đơn, khách hàng, bàn..." />
-            </label>
-            <label className={styles.selectWrap}>
-              <span className="sr-only">Lọc trạng thái đơn hàng</span>
-              <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value as OrderFilter)}>
-                <option value="all">Tất cả trạng thái</option>
-                {Object.entries(statusMeta).map(([value, meta]) => <option value={value} key={value}>{meta.label}</option>)}
-              </select>
-            </label>
-            <label className={styles.selectWrap}>
-              <span className="sr-only">Lọc thanh toán</span>
-              <select value={paymentFilter} onChange={(event) => setPaymentFilter(event.target.value as PaymentFilter)}>
-                <option value="all">Mọi thanh toán</option>
-                <option value="paid">Đã thanh toán</option>
-                <option value="unpaid">Chưa thanh toán</option>
-              </select>
-            </label>
-            {(orderQuery || statusFilter !== "all" || paymentFilter !== "all") ? (
-              <button className={styles.resetButton} type="button" onClick={resetOrderFilters}><RefreshCw size={14} /> Đặt lại</button>
-            ) : null}
-          </div>
-
-          <div className={styles.resultMeta}>
-            <span>Hiển thị <strong>{visibleOrders.length}</strong> / {orders.length} đơn trong ca</span>
-            <span className={styles.updatedText}><Clock3 size={13} /> Cập nhật lúc 11:45</span>
-          </div>
-
-          <div className={styles.orderTable}>
-            <div className={`${styles.orderRow} ${styles.orderHead}`}>
-              <span>Đơn hàng</span><span>Khách / vị trí</span><span>Món gọi</span><span>Thanh toán</span><span>Trạng thái</span><span>Thao tác</span>
-            </div>
-            {visibleOrders.map((order) => {
+        {tab === "orders" ? (
+          <div className={styles.orderList}>
+            <div className={styles.orderHead}><span>Đơn hàng</span><span>Bàn / người đặt</span><span>Món</span><span>Thanh toán</span><span>Trạng thái</span><span>Thao tác</span></div>
+            {filteredOrders.map((order) => {
               const meta = statusMeta[order.status];
-              return (
-                <article className={styles.orderRow} key={order.id}>
-                  <div className={styles.orderIdentity}>
-                    <span className={styles.orderIcon}><ReceiptText size={17} /></span>
-                    <span><strong>{order.code}</strong><small>{order.createdAt} · {money.format(order.total)}</small></span>
-                  </div>
-                  <div className={styles.orderCustomer} data-label="Khách / vị trí">
-                    <strong>{order.customer}</strong><small>{order.table}</small>
-                  </div>
-                  <div className={styles.orderItems} data-label="Món gọi">
-                    <strong>{order.items[0]}</strong>{order.items.length > 1 ? <small>+{order.items.length - 1} món khác</small> : <small>1 món</small>}
-                  </div>
-                  <div data-label="Thanh toán">
-                    <Badge tone={order.payment === "paid" ? "emerald" : "amber"} dot>{order.payment === "paid" ? "Đã trả" : "Chưa trả"}</Badge>
-                  </div>
-                  <div data-label="Trạng thái"><Badge tone={meta.tone} dot>{meta.shortLabel}</Badge></div>
-                  <div className={styles.rowActions} data-label="Thao tác">
-                    {meta.next && meta.action ? (
-                      <button className={styles.rowAction} type="button" onClick={() => void updateOrderStatus(order, meta.next!)}>
-                        {meta.action}<ArrowRight size={14} />
-                      </button>
-                    ) : <span className={styles.doneText}><CheckCircle2 size={14} /> Đã đóng đơn</span>}
-                  </div>
-                </article>
-              );
+              return <article className={styles.orderRow} key={order._id}>
+                <div className={styles.orderIdentity}><span><ReceiptText size={18} /></span><div><strong>{order.orderNumber}</strong><small>{formatDateTime(order.createdAt)}</small></div></div>
+                <div className={styles.stack}><strong>{tableById.get(order.tableId ?? "")?.name ?? (order.tableId ? `Bàn ${order.tableId.slice(-6)}` : "Chưa có bàn")}</strong><small>{order.userId}</small></div>
+                <div className={styles.items}>{order.items.map((item) => <span key={`${item.menuItemId ?? item.name}-${item.name}`}>{item.name} × {item.quantity}</span>)}</div>
+                <div className={styles.stack}><strong>{money.format(order.finalAmount)}</strong><small>{order.paymentStatus === "PAID" ? "Đã thu tiền mặt" : "Chưa thanh toán"}</small></div>
+                <Badge tone={meta.tone} dot>{meta.label}</Badge>
+                <div className={styles.rowActions}>{order.status === "CREATED" ? <><button className={styles.payButton} type="button" onClick={() => settleOrder(order)} disabled={busy === `order-${order._id}`}><CircleDollarSign size={14} /> Đã thu tiền</button><button className={styles.iconButton} type="button" onClick={() => cancelOrder(order)} aria-label={`Hủy ${order.orderNumber}`} disabled={busy === `order-${order._id}`}><X size={15} /></button></> : <span className={styles.doneText}>Không còn thao tác</span>}</div>
+              </article>;
             })}
-            {visibleOrders.length === 0 ? (
-              <div className={styles.emptyState}><Search size={24} /><strong>Không tìm thấy đơn phù hợp</strong><p>Hãy thay đổi từ khóa hoặc điều kiện lọc.</p><button type="button" onClick={resetOrderFilters}>Xóa bộ lọc</button></div>
-            ) : null}
+            {!filteredOrders.length ? <Empty icon={<ReceiptText size={25} />} title="Không có đơn phù hợp" description="Thay đổi bộ lọc hoặc chờ đơn mới từ ứng dụng người dùng." /> : null}
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {activeTab === "kitchen" ? (
-        <section className={styles.kitchenSection}>
-          <div className={styles.kitchenHero}>
-            <div className={styles.heroIcon}><Flame size={25} /></div>
-            <div><span>Kitchen live</span><h2>Điều phối nhà bếp</h2><p>Ưu tiên đơn theo thời gian tiếp nhận và báo món ngay khi sẵn sàng.</p></div>
-            <div className={styles.heroMetrics}>
-              <span><strong>{orders.filter((order) => order.status === "confirmed").length}</strong><small>Chờ bếp</small></span>
-              <span><strong>{cookingCount}</strong><small>Đang nấu</small></span>
-              <span><strong>{orders.filter((order) => order.status === "ready").length}</strong><small>Chờ giao</small></span>
-            </div>
-            <button type="button" onClick={() => void receiveNextOrder()}><CookingPot size={17} /> Nhận đơn tiếp theo</button>
+        {tab === "menu" ? (
+          <div className={styles.cardGrid}>
+            {filteredMenu.map((item) => <article className={`${styles.entityCard} ${!item.isAvailable ? styles.entityMuted : ""}`} key={item._id}>
+              <div className={styles.entityTop}><span className={styles.entityIcon}><Soup size={22} /></span><Badge tone={item.isAvailable ? "emerald" : "slate"} dot>{item.isAvailable ? "Đang bán" : "Đang ẩn"}</Badge></div>
+              <div className={styles.entityBody}><small>{categoryById.get(item.categoryId)?.name ?? "Danh mục không còn tồn tại"}</small><h3>{item.name}</h3><p>{item.description?.trim() || "Chưa có mô tả món ăn."}</p><strong>{money.format(item.price)}</strong></div>
+              <footer className={styles.entityActions}><button type="button" onClick={() => toggleMenu(item)} disabled={busy === `menu-${item._id}`}>{item.isAvailable ? "Tạm ẩn" : "Mở bán"}</button><button type="button" onClick={() => openMenuEditor(item)} aria-label={`Sửa ${item.name}`}><PencilLine size={15} /></button><button className={styles.dangerButton} type="button" onClick={() => removeMenu(item)} aria-label={`Xóa ${item.name}`}><Trash2 size={15} /></button></footer>
+            </article>)}
+            {!filteredMenu.length ? <Empty icon={<Soup size={25} />} title="Chưa có món ăn" description={categories.length ? "Tạo món mới để bắt đầu xây dựng thực đơn." : "Bạn cần tạo danh mục trước khi thêm món."} /> : null}
           </div>
+        ) : null}
 
-          <div className={styles.kitchenBoard}>
-            {([
-              { status: "confirmed" as const, label: "Chờ tiếp nhận", tone: "blue", icon: Clock3 },
-              { status: "cooking" as const, label: "Đang chế biến", tone: "amber", icon: Flame },
-              { status: "ready" as const, label: "Sẵn sàng giao", tone: "emerald", icon: CheckCircle2 },
-            ]).map((lane) => {
-              const laneOrders = orders.filter((order) => order.status === lane.status);
-              const Icon = lane.icon;
-              return (
-                <div className={styles.kitchenLane} key={lane.status}>
-                  <header className={`${styles.laneHeader} ${styles[`laneHeader_${lane.tone}`]}`}>
-                    <span><Icon size={17} /><strong>{lane.label}</strong></span><b>{laneOrders.length}</b>
-                  </header>
-                  <div className={styles.laneBody}>
-                    {laneOrders.map((order) => {
-                      const meta = statusMeta[order.status];
-                      return (
-                        <article className={styles.kitchenCard} key={order.id}>
-                          <div className={styles.kitchenCardTop}><strong>{order.code}</strong><time><Clock3 size={12} /> {order.createdAt}</time></div>
-                          <div className={styles.tableChip}>{order.table}</div>
-                          <ul>{order.items.map((item) => <li key={item}>{item}</li>)}</ul>
-                          <div className={styles.kitchenCardFooter}>
-                            <span>{order.customer}</span>
-                            {meta.next && meta.action ? <button type="button" onClick={() => void updateOrderStatus(order, meta.next!)}>{meta.action}<ArrowRight size={13} /></button> : null}
-                          </div>
-                        </article>
-                      );
-                    })}
-                    {laneOrders.length === 0 ? <div className={styles.laneEmpty}><PackageCheck size={22} /><span>Không có đơn</span></div> : null}
-                  </div>
-                </div>
-              );
-            })}
+        {tab === "categories" ? (
+          <div className={styles.cardGrid}>
+            {filteredCategories.map((category) => <article className={styles.entityCard} key={category._id}>
+              <div className={styles.entityTop}><span className={styles.entityIcon}><Tags size={22} /></span><Badge tone={category.isActive !== false ? "emerald" : "slate"} dot>{category.isActive !== false ? "Đang hiển thị" : "Đang ẩn"}</Badge></div>
+              <div className={styles.entityBody}><small>Thứ tự {category.displayOrder ?? 0}</small><h3>{category.name}</h3><p>{category.description || "Chưa có mô tả."}</p><strong>{menu.filter((item) => item.categoryId === category._id).length} món</strong></div>
+              <footer className={styles.entityActions}><button type="button" onClick={() => void mutate(`category-${category._id}`, () => gatewayApi(`canteen/categories/${encodeURIComponent(category._id)}`, { method: "PATCH", json: { isActive: category.isActive === false } }), category.isActive === false ? "Đã hiển thị danh mục." : "Đã ẩn danh mục.")}>{category.isActive === false ? "Hiển thị" : "Tạm ẩn"}</button><button type="button" onClick={() => openCategoryEditor(category)} aria-label={`Sửa ${category.name}`}><PencilLine size={15} /></button><button className={styles.dangerButton} type="button" onClick={() => removeCategory(category)} aria-label={`Xóa ${category.name}`}><Trash2 size={15} /></button></footer>
+            </article>)}
+            {!filteredCategories.length ? <Empty icon={<Tags size={25} />} title="Chưa có danh mục" description="Tạo danh mục để phân nhóm thực đơn." /> : null}
           </div>
-        </section>
-      ) : null}
+        ) : null}
 
-      {activeTab === "menu" ? (
-        <section className={`surface-card ${styles.panel}`}>
-          <div className={styles.panelHeader}>
-            <div><span className={styles.panelEyebrow}>Danh mục bán hôm nay</span><h2>Thực đơn căn tin</h2><p>Bật hoặc tạm ngưng món theo năng lực phục vụ thực tế.</p></div>
-            <button className="button-primary" type="button" disabled title="Cần biểu mẫu đầy đủ theo CreateMenuItemDto"><Plus size={16} /> Thêm món</button>
+        {tab === "tables" ? (
+          <div className={styles.tableGrid}>
+            {filteredTables.map((table) => <article className={styles.tableCard} key={table._id}>
+              <div className={styles.tableVisual}><Table2 size={24} /><span>{table.capacity}</span></div>
+              <div className={styles.tableCopy}><small>Bàn phục vụ</small><h3>{table.name}</h3><p><UsersRound size={14} /> Tối đa {table.capacity} người</p><Badge tone={tableStatusMeta[table.status].tone} dot>{tableStatusMeta[table.status].label}</Badge></div>
+              <label className={styles.statusSelect}><span className="sr-only">Trạng thái {table.name}</span><select value={table.status} onChange={(event) => changeTableStatus(table, event.target.value as ApiTableStatus)} disabled={busy === `table-${table._id}`}><option value="empty">Đang trống</option><option value="occupied">Đang sử dụng</option><option value="reserved">Đã đặt trước</option></select></label>
+              <div className={styles.tableActions}><button type="button" onClick={() => openTableEditor(table)}><PencilLine size={15} /></button><button type="button" className={styles.dangerButton} onClick={() => removeTable(table)} disabled={table.status !== "empty"}><Trash2 size={15} /></button></div>
+            </article>)}
+            {!filteredTables.length ? <Empty icon={<Grid2X2 size={25} />} title="Chưa có bàn ăn" description="Tạo bàn để người dùng có thể đặt món đúng vị trí." /> : null}
           </div>
-          <div className={styles.toolbar}>
-            <label className={styles.searchField}><Search size={17} /><span className="sr-only">Tìm món ăn</span><input value={menuQuery} onChange={(event) => setMenuQuery(event.target.value)} placeholder="Tìm tên món..." /></label>
-            <label className={styles.selectWrap}><span className="sr-only">Lọc danh mục</span><select value={menuCategory} onChange={(event) => setMenuCategory(event.target.value)}>{categories.map((category) => <option key={category}>{category}</option>)}</select></label>
-            <span className={styles.toolbarSummary}><strong>{menu.filter((item) => item.available).length}</strong>/{menu.length} món đang mở bán</span>
-          </div>
-          <div className={styles.menuGrid}>
-            {visibleMenu.map((item) => (
-              <article className={`${styles.menuCard} ${!item.available ? styles.menuCardDisabled : ""}`} key={item.id}>
-                <div className={`${styles.foodVisual} ${styles[`foodVisual_${item.tone}`]}`}><Soup size={27} /><span>{item.category}</span></div>
-                <div className={styles.menuCardBody}>
-                <div className={styles.menuTitle}><div><h3>{item.name}</h3><p>{money.format(item.price)}</p></div><button className={`${styles.toggle} ${item.available ? styles.toggleActive : ""}`} type="button" role="switch" aria-checked={item.available} onClick={() => void toggleMenuItem(item.id)}><span /></button></div>
-                  <div className={styles.menuMeta}><span><Clock3 size={13} /> {item.prep}</span><span><TrendingUp size={13} /> {item.sold} phần hôm nay</span></div>
-                  <div className={styles.availability}><Badge tone={item.available ? "emerald" : "slate"} dot>{item.available ? "Đang mở bán" : "Tạm ngưng"}</Badge><button type="button" onClick={() => setNotice(`Đang mở thông tin món ${item.name}.`)}>Chi tiết</button></div>
-                </div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+        ) : null}
+      </section>
 
-      {activeTab === "inventory" ? (
-        <section className={`surface-card ${styles.panel}`}>
-          <div className={styles.panelHeader}>
-            <div><span className={styles.panelEyebrow}>Kiểm soát nguyên liệu</span><h2>Tồn kho hiện tại</h2><p>{lowStockCount} nguyên liệu đang dưới ngưỡng an toàn.</p></div>
-            <button className="button-primary" type="button" disabled title="Cần nhập đủ số lượng, hạn dùng và giá vốn"><Plus size={16} /> Tạo phiếu nhập</button>
+      {editor ? <div className="modal-backdrop" onMouseDown={() => setEditor(null)}><section className={`modal-card ${styles.modal}`} role="dialog" aria-modal="true" aria-labelledby="canteen-editor-title" onMouseDown={(event) => event.stopPropagation()}>
+        <header className={styles.modalHeader}><div><span>{editor.kind === "menu" ? <Soup size={19} /> : editor.kind === "category" ? <Tags size={19} /> : <Table2 size={19} />}</span><div><small>{editor.id ? "Chỉnh sửa dữ liệu" : "Tạo dữ liệu mới"}</small><h2 id="canteen-editor-title">{editor.kind === "menu" ? "Thông tin món ăn" : editor.kind === "category" ? "Thông tin danh mục" : "Thông tin bàn ăn"}</h2></div></div><button type="button" onClick={() => setEditor(null)} aria-label="Đóng"><X size={18} /></button></header>
+        <form onSubmit={(event) => void saveEditor(event)}>
+          <div className={styles.modalBody}>
+            <label><span className="form-label">Tên <em>*</em></span><input className="field" autoFocus value={editor.name} onChange={(event) => setEditor({ ...editor, name: event.target.value })} required /></label>
+            {editor.kind === "menu" ? <>
+              <label><span className="form-label">Danh mục <em>*</em></span><select className="select-field" value={editor.categoryId} onChange={(event) => setEditor({ ...editor, categoryId: event.target.value })} required><option value="">Chọn danh mục</option>{categories.map((category) => <option key={category._id} value={category._id}>{category.name}</option>)}</select></label>
+              <label><span className="form-label">Giá bán (VND) <em>*</em></span><input className="field" type="number" min="0" step="1" value={editor.price} onChange={(event) => setEditor({ ...editor, price: event.target.value })} required /></label>
+              <label><span className="form-label">URL hình ảnh</span><input className="field" type="url" value={editor.imageUrl} onChange={(event) => setEditor({ ...editor, imageUrl: event.target.value })} placeholder="https://..." /></label>
+              <label className={styles.fullField}><span className="form-label">Mô tả</span><textarea className="textarea-field" value={editor.description} onChange={(event) => setEditor({ ...editor, description: event.target.value })} /></label>
+              <label className={styles.checkField}><input type="checkbox" checked={editor.isAvailable} onChange={(event) => setEditor({ ...editor, isAvailable: event.target.checked })} /><span>Cho phép hiển thị và đặt món</span></label>
+            </> : null}
+            {editor.kind === "category" ? <>
+              <label><span className="form-label">Thứ tự hiển thị</span><input className="field" type="number" min="0" step="1" value={editor.displayOrder} onChange={(event) => setEditor({ ...editor, displayOrder: event.target.value })} required /></label>
+              <label className={styles.fullField}><span className="form-label">Mô tả <em>*</em></span><textarea className="textarea-field" value={editor.description} onChange={(event) => setEditor({ ...editor, description: event.target.value })} required /></label>
+              <label className={styles.checkField}><input type="checkbox" checked={editor.isActive} onChange={(event) => setEditor({ ...editor, isActive: event.target.checked })} /><span>Hiển thị danh mục trên thực đơn</span></label>
+            </> : null}
+            {editor.kind === "table" ? <label><span className="form-label">Sức chứa <em>*</em></span><input className="field" type="number" min="1" step="1" value={editor.capacity} onChange={(event) => setEditor({ ...editor, capacity: event.target.value })} required /></label> : null}
           </div>
-          <div className={styles.stockCallout}>
-            <span className={styles.warningIcon}><TriangleAlert size={19} /></span>
-            <div><strong>{lowStockCount} nguyên liệu sắp hết</strong><p>Ưu tiên nhập bù trước ca chiều để không ảnh hưởng món đang mở bán.</p></div>
-            <button type="button" onClick={() => setStockFilter("low")}>Xem nguyên liệu thấp <ArrowRight size={14} /></button>
-          </div>
-          <div className={styles.stockFilters}>
-            {(["all", "low", "good"] as StockFilter[]).map((filter) => (
-              <button className={stockFilter === filter ? styles.stockFilterActive : ""} type="button" key={filter} onClick={() => setStockFilter(filter)}>
-                {filter === "all" ? "Tất cả" : filter === "low" ? "Sắp hết" : "Đủ hàng"}
-                <span>{filter === "all" ? inventory.length : filter === "low" ? lowStockCount : inventory.length - lowStockCount}</span>
-              </button>
-            ))}
-          </div>
-          <div className={styles.inventoryTable}>
-            <div className={`${styles.inventoryRow} ${styles.inventoryHead}`}><span>Nguyên liệu</span><span>Nhà cung cấp</span><span>Mức tồn</span><span>Cập nhật</span><span>Thao tác</span></div>
-            {visibleInventory.map((item) => {
-              const low = item.quantity <= item.minimum;
-              const percent = Math.round((item.quantity / item.capacity) * 100);
-              return (
-                <article className={styles.inventoryRow} key={item.id}>
-                  <div className={styles.inventoryIdentity}><span className={low ? styles.inventoryIconLow : styles.inventoryIcon}><Package size={18} /></span><span><strong>{item.name}</strong><small>Ngưỡng tối thiểu {item.minimum} {item.unit}</small></span></div>
-                  <span className={styles.supplier} data-label="Nhà cung cấp">{item.supplier}</span>
-                  <div className={styles.stockLevel} data-label="Mức tồn"><span><strong>{item.quantity} {item.unit}</strong><small>{percent}% sức chứa</small></span><div><i style={{ width: `${percent}%` }} className={low ? styles.progressLow : ""} /></div></div>
-                  <span className={styles.stockUpdated} data-label="Cập nhật">{item.updatedAt}</span>
-                  <div data-label="Thao tác">{low ? <button className={styles.restockButton} type="button" onClick={() => restock(item)}>Nhập bù</button> : <Badge tone="emerald" dot>Ổn định</Badge>}</div>
-                </article>
-              );
-            })}
-          </div>
-        </section>
-      ) : null}
-
-      {activeTab === "analytics" ? (
-        <section className={styles.analyticsSection}>
-          <div className={styles.analyticsTop}>
-            <article className={`surface-card ${styles.revenueCard}`}>
-              <div className={styles.analyticsHeader}>
-                <div><span className={styles.panelEyebrow}>Doanh thu</span><h2>Hiệu suất bán hàng</h2><p>Doanh thu đã thanh toán theo kỳ được chọn.</p></div>
-                <div className={styles.rangeTabs}>{Object.keys(chartData).map((range) => <button className={analyticsRange === range ? styles.rangeActive : ""} type="button" key={range} onClick={() => setAnalyticsRange(range)}>{range}</button>)}</div>
-              </div>
-              <div className={styles.revenueSummary}><strong>{money.format(revenue)}</strong><span><TrendingUp size={14} /> Dữ liệu đã thanh toán</span></div>
-              <div className={styles.chartWrap}>
-                <div className={styles.yAxis}><span>4tr</span><span>3tr</span><span>2tr</span><span>1tr</span><span>0</span></div>
-                <div className={styles.chart} style={{ gridTemplateColumns: `repeat(${chartData[analyticsRange].length}, minmax(0, 1fr))` }}>
-                  {chartData[analyticsRange].map((point, index) => <div className={styles.barColumn} key={point.label}><div className={styles.barTrack}><i style={{ height: `${point.value}%` }} className={index === chartData[analyticsRange].length - 1 ? styles.barHighlight : ""}><span>{money.format(point.amount)}</span></i></div><small>{point.label}</small></div>)}
-                </div>
-              </div>
-            </article>
-            <aside className={`surface-card ${styles.performanceCard}`}>
-              <div className={styles.gaugeIcon}><Gauge size={22} /></div><span className={styles.panelEyebrow}>Tỷ lệ hoàn tất</span><strong>{completionRate}%</strong><p>{completedCount} trên {apiOrders.length} đơn đã hoàn tất.</p><div className={styles.performanceTrack}><i style={{ width: `${completionRate}%` }} /></div><ul><li><span>Đơn đang xử lý</span><strong>{newCount + cookingCount}</strong></li><li><span>Giá trị đơn TB</span><strong>{money.format(averageOrder)}</strong></li><li><span>Đơn đã hủy</span><strong>{cancelledCount}</strong></li></ul>
-            </aside>
-          </div>
-          <div className={styles.analyticsBottom}>
-            <article className={`surface-card ${styles.topDishes}`}>
-              <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Top sản phẩm</span><h2>Món bán chạy</h2></div><Badge tone="red">Từ API</Badge></div>
-              {topDishes.slice(0, 5).map((item, index) => <div className={styles.dishRank} key={item.menuItemId}><b>{index + 1}</b><span className={styles.rankIcon}><Soup size={17} /></span><div><strong>{item.name}</strong><small>{money.format(item.totalRevenue)}</small></div><span className={styles.rankSales}><strong>{item.salesCount}</strong><small>phần</small></span><div className={styles.rankBar}><i style={{ width: `${(item.salesCount / Math.max(topDishes[0]?.salesCount ?? 1, 1)) * 100}%` }} /></div></div>)}
-            </article>
-            <article className={`surface-card ${styles.shiftSummary}`}>
-              <div className={styles.panelHeader}><div><span className={styles.panelEyebrow}>Theo khung giờ</span><h2>Nhịp phục vụ hôm nay</h2></div><CalendarDays size={19} /></div>
-              <div className={styles.shiftTimeline}>
-                {timeSlots.map((slot) => <div key={slot.start}><time>{String(slot.start).padStart(2, "0")}:00 – {String(slot.end).padStart(2, "0")}:00</time><span><i style={{ width: `${Math.round((slot.count / maxSlotCount) * 100)}%` }} /></span><strong>{slot.count} đơn</strong></div>)}
-              </div>
-              <div className={styles.peakNote}><Flame size={17} /><div><strong>Khung giờ cao điểm</strong><p>Dựa trên số đơn thực tế trong dữ liệu hiện tại.</p></div></div>
-            </article>
-          </div>
-        </section>
-      ) : null}
+          <footer className={styles.modalFooter}><button className="button-secondary" type="button" onClick={() => setEditor(null)}>Hủy</button><button className="button-primary" type="submit" disabled={busy === `editor-${editor.kind}`}><ArchiveRestore size={15} /> {busy === `editor-${editor.kind}` ? "Đang lưu..." : "Lưu thay đổi"}</button></footer>
+        </form>
+      </section></div> : null}
     </div>
   );
+}
+
+function Empty({ icon, title, description }: { icon: React.ReactNode; title: string; description: string }) {
+  return <div className={styles.empty}><span>{icon}</span><strong>{title}</strong><p>{description}</p></div>;
 }

@@ -21,7 +21,6 @@ import {
   Target,
   TimerReset,
   UserRoundCheck,
-  UsersRound,
   X,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
@@ -60,7 +59,6 @@ const emptyForm = {
   title: "",
   description: "",
   assigneeId: "",
-  department: "NRApp",
   due: "",
   priority: "medium" as TaskPriority,
 };
@@ -74,7 +72,6 @@ export default function TasksPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [activeStatus, setActiveStatus] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
-  const [department, setDepartment] = useState("all");
   const [priority, setPriority] = useState<"all" | TaskPriority>("all");
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -82,18 +79,17 @@ export default function TasksPage() {
   const [notice, setNotice] = useState("");
 
   const loadTasks = useCallback(async () => {
-    try {
-      const [taskResult, userResult] = await Promise.all([
+      const [taskResult, userResult] = await Promise.allSettled([
         gatewayApi<ApiTaskPage>("todo?limit=100"),
         gatewayApi<{ users: ApiUser[] }>("user/user/all"),
       ]);
-      setTaskItems((Array.isArray(taskResult.tasks) ? taskResult.tasks : []).map(toTask).filter((task): task is Task => task !== null));
-      const nextEmployees = (Array.isArray(userResult.users) ? userResult.users : []).map(toEmployee);
-      setEmployees(nextEmployees);
-      setForm((current) => current.assigneeId || !nextEmployees[0] ? current : { ...current, assigneeId: nextEmployees[0].id, department: nextEmployees[0].department });
-    } catch (error) {
-      setNotice(error instanceof Error ? error.message : "Không thể tải dữ liệu công việc.");
-    }
+      if (taskResult.status === "fulfilled") setTaskItems((Array.isArray(taskResult.value.tasks) ? taskResult.value.tasks : []).map(toTask).filter((task): task is Task => task !== null));
+      if (userResult.status === "fulfilled") {
+        const nextEmployees = (Array.isArray(userResult.value.users) ? userResult.value.users : []).map(toEmployee);
+        setEmployees(nextEmployees);
+        setForm((current) => current.assigneeId || !nextEmployees[0] ? current : { ...current, assigneeId: nextEmployees[0].id });
+      }
+      if (taskResult.status === "rejected" || userResult.status === "rejected") setNotice("Một phần dữ liệu công việc chưa đồng bộ được. Hãy thử làm mới.");
   }, []);
 
   useEffect(() => { void Promise.resolve().then(loadTasks); }, [loadTasks]);
@@ -122,16 +118,14 @@ export default function TasksPage() {
     const normalizedQuery = query.trim().toLocaleLowerCase("vi");
     return taskItems.filter((task) => {
       const matchesStatus = activeStatus === "all" || task.status === activeStatus;
-      const matchesDepartment = department === "all" || task.department === department;
       const matchesPriority = priority === "all" || task.priority === priority;
       const matchesQuery = !normalizedQuery || `${task.title} ${task.description} ${task.assignee} ${task.id}`.toLocaleLowerCase("vi").includes(normalizedQuery);
-      return matchesStatus && matchesDepartment && matchesPriority && matchesQuery;
+      return matchesStatus && matchesPriority && matchesQuery;
     });
-  }, [activeStatus, department, priority, query, taskItems]);
+  }, [activeStatus, priority, query, taskItems]);
 
   const completed = counts.done;
   const averageProgress = Math.round(taskItems.reduce((total, task) => total + task.progress, 0) / Math.max(taskItems.length, 1));
-  const departments = Array.from(new Set(taskItems.map((task) => task.department)));
   const assigneeWorkload = Array.from(taskItems.reduce((map, task) => {
     if (task.status !== "done") map.set(task.assignee, (map.get(task.assignee) ?? 0) + 1);
     return map;
@@ -155,7 +149,6 @@ export default function TasksPage() {
 
   const resetFilters = () => {
     setQuery("");
-    setDepartment("all");
     setPriority("all");
     setActiveStatus("all");
   };
@@ -230,14 +223,6 @@ export default function TasksPage() {
               {query ? <button type="button" onClick={() => setQuery("")} aria-label="Xóa tìm kiếm"><X size={14} /></button> : null}
             </label>
             <label className={styles.selectWrap}>
-              <UsersRound size={15} />
-              <select value={department} onChange={(event) => setDepartment(event.target.value)} aria-label="Lọc bộ phận">
-                <option value="all">Mọi bộ phận</option>
-                {departments.map((item) => <option key={item} value={item}>{item}</option>)}
-              </select>
-              <ChevronDown size={14} />
-            </label>
-            <label className={styles.selectWrap}>
               <Flag size={15} />
               <select value={priority} onChange={(event) => setPriority(event.target.value as "all" | TaskPriority)} aria-label="Lọc mức ưu tiên">
                 <option value="all">Mọi ưu tiên</option>
@@ -270,7 +255,7 @@ export default function TasksPage() {
                   </div>
                   <div className={styles.assignee}>
                     <Avatar initials={task.assigneeInitial} size="sm" tone={taskTone(index)} />
-                    <div><strong>{task.assignee}</strong><span>{task.department}</span></div>
+                    <div><strong>{task.assignee}</strong><span>{task.assigneeRole}</span></div>
                   </div>
                   <div className={styles.deadline}>
                     <CalendarClock size={15} />
@@ -366,17 +351,8 @@ export default function TasksPage() {
                 </label>
                 <label>
                   <span className="form-label">Người phụ trách</span>
-                  <select className="select-field" value={form.assigneeId} onChange={(event) => {
-                    const nextEmployee = employees.find((employee) => employee.id === event.target.value);
-                    setForm({ ...form, assigneeId: event.target.value, department: nextEmployee?.department ?? form.department });
-                  }}>
-                    {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
-                  </select>
-                </label>
-                <label>
-                  <span className="form-label">Bộ phận</span>
-                  <select className="select-field" value={form.department} onChange={(event) => setForm({ ...form, department: event.target.value })}>
-                    {Array.from(new Set(employees.map((employee) => employee.department))).map((item) => <option key={item}>{item}</option>)}
+                  <select className="select-field" value={form.assigneeId} onChange={(event) => setForm({ ...form, assigneeId: event.target.value })}>
+                    {employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name} · {employee.role}</option>)}
                   </select>
                 </label>
                 <label>
