@@ -9,7 +9,7 @@ export function StatCard({
   trend,
   trendDirection = "up",
   icon,
-  tone = "red",
+  tone = "teal",
 }: {
   label: string;
   value: string | number;

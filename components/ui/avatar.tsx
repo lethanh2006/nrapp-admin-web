@@ -3,7 +3,7 @@ import type { BadgeTone } from "@/lib/types";
 
 export function Avatar({
   initials,
-  tone = "red",
+  tone = "teal",
   size = "md",
   online = false,
 }: {

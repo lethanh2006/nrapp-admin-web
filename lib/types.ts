@@ -1,4 +1,5 @@
 export type BadgeTone =
+  | "teal"
   | "red"
   | "emerald"
   | "amber"

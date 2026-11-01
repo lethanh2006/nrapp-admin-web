@@ -49,7 +49,7 @@ export function formatDateTime(value?: string) {
 }
 
 export const roleLabels: Record<string, string> = { admin: "Quản trị viên", user: "Nhân viên" };
-const tones: BadgeTone[] = ["red", "violet", "blue", "amber", "emerald", "cyan", "slate"];
+const tones: BadgeTone[] = ["teal", "violet", "blue", "amber", "emerald", "cyan", "slate"];
 export function toEmployee(user: ApiUser, index = 0): Employee {
   const name = userName(user);
   const role = roleLabels[user.role ?? ""] ?? "Nhân viên";
