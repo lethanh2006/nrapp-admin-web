@@ -32,9 +32,9 @@
 .filterButton { display: grid; width: 38px; height: 39px; cursor: pointer; place-items: center; border: 1px solid var(--slate-200); border-radius: 8px; background: white; color: var(--slate-500); }
 .filterButton:hover { background: var(--slate-50); }
 
-.tableHead { display: grid; grid-template-columns: minmax(240px, 1.7fr) minmax(160px, 1fr) 120px minmax(90px, .6fr) 152px 28px; align-items: center; gap: 11px; min-width: 800px; min-height: 34px; border-radius: 8px; padding: 0 9px; background: var(--slate-50); color: var(--slate-400); font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.tableHead { display: grid; grid-template-columns: minmax(200px, 1.6fr) minmax(150px, 1fr) 112px minmax(84px, .55fr) 142px 28px; align-items: center; gap: 11px; min-width: 800px; min-height: 34px; border-radius: 8px; padding: 0 9px; background: var(--slate-50); color: var(--slate-400); font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .taskList { min-width: 800px; }
-.taskRow { display: grid; grid-template-columns: minmax(240px, 1.7fr) minmax(160px, 1fr) 120px minmax(90px, .6fr) 152px 28px; align-items: center; gap: 11px; min-height: 94px; border-bottom: 1px solid var(--slate-100); padding: 9px; transition: background 150ms ease, transform 150ms ease; }
+.taskRow { display: grid; grid-template-columns: minmax(200px, 1.6fr) minmax(150px, 1fr) 112px minmax(84px, .55fr) 142px 28px; align-items: center; gap: 11px; min-height: 94px; border-bottom: 1px solid var(--slate-100); padding: 9px; transition: background 150ms ease, transform 150ms ease; }
 .taskRow:hover { border-radius: 8px; background: #fcfcfd; }
 .taskIdentity { display: flex; min-width: 0; gap: 10px; }
 .taskMark { width: 4px; height: 58px; flex: 0 0 auto; border-radius: 99px; }
@@ -176,3 +176,4 @@
 .statusSelect select { font-size: 13px; font-weight: 500; }
 .assignee strong { color: var(--slate-900); font-size: 14px; font-weight: 500; }
 .assignee > div span { margin-top: 0; color: var(--slate-600); font-size: 13px; }
+.assignee > div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
