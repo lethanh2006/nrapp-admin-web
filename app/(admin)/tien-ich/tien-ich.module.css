@@ -5,21 +5,6 @@
   gap: 23px;
 }
 
-.introCard {
-  display: flex;
-  min-height: 148px;
-  overflow: hidden;
-  align-items: center;
-  justify-content: space-between;
-  gap: 30px;
-  border: 1px solid var(--slate-200);
-  border-radius: 12px;
-  padding: 25px 27px;
-  background: white;
-  box-shadow: var(--shadow-sm);
-  color: var(--slate-900);
-}
-
 .introCard::before,
 .introCard::after {
   right: -75px;
@@ -28,96 +13,12 @@
   height: 290px;
 }
 
-.introCopy {
-  z-index: 1;
-  display: flex;
-  min-width: 0;
-  align-items: flex-start;
-  gap: 15px;
-}
-
-.introIcon {
-  display: grid;
-  width: 45px;
-  height: 45px;
-  flex: 0 0 auto;
-  place-items: center;
-  border-radius: 12px;
-  background: var(--brand-50);
-  color: var(--brand-700);
-}
-
-.introCopy p,
 .healthHeading p,
 .summaryHeading p {
   margin: 0 0 5px;
   color: var(--brand-700);
   font-size: 12px;
   font-weight: 700;
-}
-
-.introCopy h2 {
-  margin: 0;
-  font-size: clamp(20px, 3vw, 27px);
-  font-weight: 700;
-  letter-spacing: -.02em;
-}
-
-.introCopy > div > span {
-  display: block;
-  max-width: 640px;
-  margin-top: 8px;
-  color: var(--slate-600);
-  font-size: 13px;
-  line-height: 1.6;
-}
-
-.introStatus {
-  z-index: 1;
-  display: flex;
-  min-width: 260px;
-  align-items: center;
-  gap: 10px;
-  border: 1px solid var(--slate-200);
-  border-radius: 12px;
-  padding: 13px 14px;
-  background: var(--slate-50);
-}
-
-.statusPulse {
-  width: 9px;
-  height: 9px;
-  flex: 0 0 auto;
-  border: 2px solid rgba(167, 243, 208, 0.3);
-  border-radius: 50%;
-  background: #34d399;
-  box-shadow: 0 0 0 5px rgba(52, 211, 153, 0.1);
-}
-
-.introStatus > span:nth-child(2) {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  flex-direction: column;
-}
-
-.introStatus small {
-  color: var(--slate-500);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.introStatus strong {
-  overflow: hidden;
-  margin-top: 3px;
-  font-size: 13px;
-  font-weight: 700;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.introStatus > svg {
-  color: #059669;
 }
 
 .toolGrid {
@@ -596,17 +497,6 @@
 }
 
 @media (max-width: 760px) {
-  .introCard {
-    align-items: stretch;
-    flex-direction: column;
-    gap: 18px;
-  }
-
-  .introStatus {
-    width: 100%;
-    min-width: 0;
-  }
-
   .healthContent {
     grid-template-columns: 1fr;
   }
@@ -625,16 +515,6 @@
 @media (max-width: 560px) {
   .page {
     gap: 18px;
-  }
-
-  .introCard {
-    min-height: 0;
-    border-radius: 12px;
-    padding: 20px;
-  }
-
-  .introCopy {
-    flex-direction: column;
   }
 
   .toolGrid {
@@ -668,3 +548,18 @@
     height: 62px;
   }
 }
+
+/* Thẻ công cụ: một màu nhấn, cao vừa nội dung */
+.page { gap: 20px; }
+.toolGrid { gap: 16px; }
+.toolCard { min-height: 0; border-radius: 12px; padding: 20px; }
+.toolCardFeatured::before { display: none; }
+.toolIcon { width: 36px; height: 36px; border-radius: 8px; background: var(--brand-50) !important; color: var(--brand-700) !important; }
+.openIcon { width: 28px; height: 28px; border-radius: 6px; }
+.toolCard h3 { margin-top: 12px; font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.toolCard > p { margin: 4px 0 16px; color: var(--slate-600); font-size: 14px; line-height: 1.5; }
+.toolFooter { padding-top: 12px; }
+.toolFooter > span:last-child { color: var(--slate-600); font-size: 13px; font-weight: 500; }
+.healthCard, .summaryCard { border-radius: 12px; padding: 20px; }
+.healthHeading h2, .summaryHeading h2 { font-size: 16px; font-weight: 600; letter-spacing: 0; }
+.systemGrid { gap: 16px; }

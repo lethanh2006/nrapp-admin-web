@@ -208,7 +208,6 @@ export default function TasksPage() {
         <section className={`${styles.taskPanel} surface-card`}>
           <div className={styles.taskPanelHead}>
             <div>
-              <p className={styles.kicker}>Danh sách tập trung</p>
               <h2>Công việc của đội ngũ</h2>
             </div>
             <div className={styles.resultMeta}><span className={styles.liveDot} /> {filteredTasks.length} kết quả</div>
@@ -292,7 +291,6 @@ export default function TasksPage() {
               <span><Target size={19} /></span>
               <Badge tone="teal">Hiện tại</Badge>
             </div>
-            <p className={styles.darkKicker}>Nhịp độ đội ngũ</p>
             <h2>Tiến độ đang đúng kế hoạch</h2>
             <p>{completed} công việc đã hoàn thành. Tập trung xử lý các mục đang mở để giữ nhịp tuần.</p>
             <div className={styles.focusScore}><strong>{averageProgress}%</strong><span>tiến độ chung</span></div>
@@ -302,7 +300,7 @@ export default function TasksPage() {
 
           <section className={`${styles.workloadCard} surface-card`}>
             <div className={styles.sideHeading}>
-              <div><p className={styles.kicker}>Phân bổ hiện tại</p><h2>Khối lượng theo nhóm</h2></div>
+              <div><h2>Khối lượng theo nhóm</h2></div>
               <BarChart3 size={18} />
             </div>
             <div className={styles.workloadList}>
@@ -318,7 +316,7 @@ export default function TasksPage() {
 
           <section className={`${styles.deadlineCard} surface-card`}>
             <div className={styles.sideHeading}>
-              <div><p className={styles.kicker}>Dữ liệu hiện tại</p><h2>Mốc cần chú ý</h2></div>
+              <div><h2>Mốc cần chú ý</h2></div>
               <AlertCircle size={18} />
             </div>
             <div className={styles.deadlineList}>
@@ -334,7 +332,7 @@ export default function TasksPage() {
           <section className={`${styles.modal} modal-card`} role="dialog" aria-modal="true" aria-labelledby="create-task-title" onMouseDown={(event) => event.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitleIcon}><Plus size={20} /></div>
-              <div><p className={styles.kicker}>Phân công nhanh</p><h2 id="create-task-title">Tạo công việc mới</h2><p>Thêm đầu việc và chỉ định người phụ trách.</p></div>
+              <div><h2 id="create-task-title">Tạo công việc mới</h2><p>Thêm đầu việc và chỉ định người phụ trách.</p></div>
               <button onClick={() => setModalOpen(false)} aria-label="Đóng"><X size={18} /></button>
             </div>
             <form onSubmit={(event) => void createTask(event)}>

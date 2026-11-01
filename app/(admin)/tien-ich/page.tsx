@@ -6,7 +6,6 @@ import {
   ArrowUpRight,
   BellRing,
   CalendarClock,
-  CheckCircle2,
   ClipboardList,
   ContactRound,
   Database,
@@ -15,7 +14,6 @@ import {
   MessageSquareMore,
   ServerCog,
   ShieldCheck,
-  Sparkles,
   UserCog,
   UtensilsCrossed,
   Wifi,
@@ -177,30 +175,6 @@ export default function UtilitiesPage() {
         }
       />
 
-      <section className={styles.introCard}>
-        <div className={styles.introCopy}>
-          <span className={styles.introIcon}>
-            <Sparkles size={20} />
-          </span>
-          <div>
-            <p>KHÔNG GIAN LÀM VIỆC THÔNG MINH</p>
-            <h2>Mọi tác vụ, đúng nơi bạn cần.</h2>
-            <span>
-              Các tiện ích được sắp xếp theo luồng vận hành hằng ngày để bạn xử lý công việc
-              nhanh hơn và ít chuyển màn hình hơn.
-            </span>
-          </div>
-        </div>
-        <div className={styles.introStatus}>
-          <span className={styles.statusPulse} />
-          <span>
-            <small>TRẠNG THÁI HỆ THỐNG</small>
-            <strong>{healthyServices === systemServices.length ? "Các API chính đang hoạt động" : `${healthyServices}/${systemServices.length} nhóm API kết nối được`}</strong>
-          </span>
-          <CheckCircle2 size={20} />
-        </div>
-      </section>
-
       <section>
         <SectionHeading
           title="Bộ công cụ quản trị"
@@ -249,7 +223,6 @@ export default function UtilitiesPage() {
         <article className={styles.healthCard}>
           <div className={styles.healthHeading}>
             <div>
-              <p>SỨC KHỎE HỆ THỐNG</p>
               <h2>Dịch vụ vận hành</h2>
               <span>Cập nhật tự động mỗi 60 giây</span>
             </div>
@@ -306,7 +279,6 @@ export default function UtilitiesPage() {
               <Gauge size={19} />
             </span>
             <div>
-              <p>TỔNG QUAN NHANH</p>
               <h2>Hôm nay</h2>
             </div>
           </div>
@@ -335,7 +307,7 @@ export default function UtilitiesPage() {
               <ServerCog size={17} />
             </span>
             <span>
-              <small>ĐỒNG BỘ API GẦN NHẤT</small>
+              <small>Đồng bộ API gần nhất</small>
               <strong>{lastSync || "Đang kết nối..."}</strong>
             </span>
             <Badge tone={healthyServices === systemServices.length ? "emerald" : "amber"}>{healthyServices === systemServices.length ? "Hoàn tất" : "Một phần"}</Badge>

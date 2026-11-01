@@ -168,7 +168,7 @@ export default function ChatPage() {
       <section className={styles.chatShell}>
         <aside className={`${styles.conversationPanel} ${conversationOpen ? styles.conversationPanelHidden : ""}`}>
           <div className={styles.panelHeader}>
-            <div><p>Kênh trao đổi</p><h2>Tin nhắn gần đây</h2></div>
+            <div><h2>Tin nhắn gần đây</h2></div>
             <span className={styles.messageCount}>{conversationItems.length}</span>
           </div>
 

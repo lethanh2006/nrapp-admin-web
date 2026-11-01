@@ -4,7 +4,7 @@
 .heroAvatar > span:first-child { border-color: var(--brand-200); background: var(--brand-700); color: white; }
 .verified { position: absolute; right: 1px; bottom: 2px; display: grid; width: 25px; height: 25px; place-items: center; border: 3px solid white; border-radius: 50%; background: #10b981; color: white; }
 .heroCopy p { margin: 0 0 5px; color: var(--brand-700); font-size: 12px; font-weight: 700; }
-.heroCopy h2 { margin: 0; font-size: clamp(25px,4vw,36px); font-weight: 700; letter-spacing: -.02em; }
+.heroCopy h2 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .heroMeta { display: flex; flex-wrap: wrap; gap: 7px 15px; margin-top: 11px; }
 .heroMeta span { display: inline-flex; align-items: center; gap: 6px; color: var(--slate-600); font-size: 13px; font-weight: 600; }
 .heroStatus { position: relative; z-index: 1; display: flex; align-items: flex-end; flex-direction: column; gap: 7px; border: 1px solid var(--slate-200); border-radius: 12px; padding: 12px 14px; background: var(--slate-50); }
@@ -121,3 +121,11 @@
   .notificationOption p { max-width: 220px; }
   .toast { right: 14px; bottom: 92px; left: 14px; justify-content: center; }
 }
+
+.profileHero { padding: 20px 24px; border-radius: 12px; }
+.heroMeta span { font-size: 14px; font-weight: 400; }
+.heroStatus { border-radius: 8px; padding: 10px 12px; }
+.heroStatus span { font-size: 14px; font-weight: 500; }
+.heroStatus small { color: var(--slate-600); font-size: 13px; }
+.cardHeader { min-height: 56px; padding: 12px 20px; }
+.cardHeader h3 { font-size: 16px; font-weight: 600; }

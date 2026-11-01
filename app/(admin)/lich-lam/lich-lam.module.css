@@ -235,3 +235,15 @@
   .barValue { font-size: 12px; }
   .barTrack { width: 58%; }
 }
+
+/* Tab gạch chân, thống nhất với trang căn tin */
+.tabs { gap: 4px; border: 0; border-bottom: 1px solid var(--slate-200); border-radius: 0; padding: 0; background: transparent; box-shadow: none; }
+.tabs button { min-width: 0; height: 44px; flex: 0 0 auto; margin-bottom: -1px; border-bottom: 2px solid transparent; border-radius: 0; padding: 0 14px; color: var(--slate-600); font-size: 14px; font-weight: 500; }
+.tabs button:hover { background: transparent; color: var(--slate-900); }
+.tabs .tabActive { border-color: var(--brand-700); background: transparent; color: var(--brand-800); }
+.tabs button em { border-radius: 999px; background: var(--slate-100); color: var(--slate-600); }
+.tabs .tabActive em { background: var(--brand-100); color: var(--brand-800); }
+
+@media (max-width: 680px) {
+  .tabs button { min-width: 0; }
+}

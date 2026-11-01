@@ -230,7 +230,6 @@ export default function SchedulePage() {
           <section className={`${styles.panel} surface-card`}>
             <div className={styles.panelHeader}>
               <div>
-                <p className={styles.kicker}>Hàng đợi phê duyệt</p>
                 <h2>Yêu cầu lịch làm</h2>
                 <p>Xác nhận đăng ký lịch làm theo tháng của nhân sự.</p>
               </div>
@@ -311,7 +310,7 @@ export default function SchedulePage() {
         <div className={styles.formsLayout}>
           <section className={`${styles.panel} surface-card`}>
             <div className={styles.panelHeader}>
-              <div><p className={styles.kicker}>Đơn từ nội bộ</p><h2>Đề nghị cần xử lý</h2><p>Theo dõi phép, công tác và nghỉ bù tập trung.</p></div>
+              <div><h2>Đề nghị cần xử lý</h2><p>Theo dõi phép, công tác và nghỉ bù tập trung.</p></div>
               <button className="button-secondary" disabled title="API hiện chưa hỗ trợ tham số lọc đơn"><FileCheck2 size={16} /> Lọc đơn</button>
             </div>
             <div className={styles.leaveList}>
@@ -335,7 +334,7 @@ export default function SchedulePage() {
           <aside className={`${styles.policyPanel} surface-card`}>
             <div className={styles.policyHero}>
               <span><ShieldCheck size={22} /></span>
-              <div><p className={styles.kicker}>Dữ liệu Gateway</p><h2>Tổng hợp đơn từ</h2></div>
+              <div><h2>Tổng hợp đơn từ</h2></div>
             </div>
             <div className={styles.policyBalance}>
               <div><strong>{pendingWorkRequests}</strong><span>đơn đang chờ</span></div>
@@ -355,7 +354,6 @@ export default function SchedulePage() {
         <div className={styles.operationsGrid}>
           <section className={styles.qrCard}>
             <div className={styles.qrContent}>
-              <p className={styles.darkKicker}>Mã điểm danh trực tiếp</p>
               <h2>Token chấm công</h2>
               <p>Token được tạo trực tiếp bởi API chấm công và nhân sự có thể nhập hoặc quét trên ứng dụng NRApp.</p>
               <div className={styles.qrMeta}><span><ShieldCheck size={15} /> Sinh bởi NRApp Gateway</span><span><Clock3 size={15} /> Hiệu lực 30 giây</span></div>
@@ -368,7 +366,7 @@ export default function SchedulePage() {
           </section>
 
           <section className={`${styles.shiftPanel} surface-card`}>
-            <div className={styles.panelHeader}><div><p className={styles.kicker}>Hình thức làm việc</p><h2>Trạng thái hôm nay</h2></div><Badge tone="emerald" dot>{todayAttendance.length} lượt ghi nhận</Badge></div>
+            <div className={styles.panelHeader}><div><h2>Trạng thái hôm nay</h2></div><Badge tone="emerald" dot>{todayAttendance.length} lượt ghi nhận</Badge></div>
             <div className={styles.shiftRows}>
               {attendanceByType.map((item) => {
                 const percent = Math.round((item.people / Math.max(todayAttendance.length, 1)) * 100);
@@ -383,7 +381,7 @@ export default function SchedulePage() {
           </section>
 
           <section className={`${styles.alertPanel} surface-card`}>
-            <div className={styles.panelHeader}><div><p className={styles.kicker}>Cần lưu ý</p><h2>Sự kiện gần đây</h2></div><Clock3 size={18} /></div>
+            <div className={styles.panelHeader}><div><h2>Sự kiện gần đây</h2></div><Clock3 size={18} /></div>
             <div className={styles.eventList}>
               {todayAttendance.slice(0, 3).map((item) => <div key={item._id}><span className={styles.eventGreen}><Check size={15} /></span><p><strong>{userName(item.employee)} đã check-in</strong><small>{item.schedule_type === "office" ? "Văn phòng" : "Từ xa"} · {item.check_in_at ? new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit" }).format(new Date(item.check_in_at)) : "—"}</small></p></div>)}
             </div>
@@ -395,7 +393,7 @@ export default function SchedulePage() {
         <div className={styles.reportLayout}>
           <section className={`${styles.chartPanel} surface-card`}>
             <div className={styles.panelHeader}>
-              <div><p className={styles.kicker}>7 ngày gần nhất</p><h2>Tỷ lệ hiện diện theo ngày</h2><p>So sánh số nhân sự thực tế trên tổng tài khoản hiện có.</p></div>
+              <div><h2>Tỷ lệ hiện diện theo ngày</h2><p>So sánh số nhân sự thực tế trên tổng tài khoản hiện có.</p></div>
               <button className={styles.periodButton}>7 ngày gần nhất <ChevronDown size={14} /></button>
             </div>
             <div className={styles.chartLegend}><span><i /> Hiện diện</span><small>Trung bình <strong>{attendanceAverage}%</strong></small></div>
@@ -412,7 +410,6 @@ export default function SchedulePage() {
 
           <aside className={`${styles.insightPanel} surface-card`}>
             <div className={styles.insightIcon}><Sparkles size={20} /></div>
-            <p className={styles.kicker}>Phân tích nhanh</p>
             <h2>{attendanceAverage >= 80 ? "Tỷ lệ hiện diện đang tốt" : "Tỷ lệ hiện diện cần theo dõi"}</h2>
             <p>Trung bình 7 ngày là <strong>{attendanceAverage}%</strong>; hôm nay ghi nhận {todayAttendance.length} lượt check-in và {checkedOutCount} lượt check-out.</p>
             <div className={styles.insightMetric}><span>Điểm hiện diện</span><strong>{(attendanceAverage / 10).toFixed(1)}<small>/10</small></strong></div>
@@ -421,7 +418,7 @@ export default function SchedulePage() {
           </aside>
 
           <section className={`${styles.departmentPanel} surface-card`}>
-            <div className={styles.panelHeader}><div><p className={styles.kicker}>Theo hệ thống</p><h2>Hiệu suất chấm công</h2></div><Badge tone="slate">{employeeCount} nhân sự</Badge></div>
+            <div className={styles.panelHeader}><div><h2>Hiệu suất chấm công</h2></div><Badge tone="slate">{employeeCount} nhân sự</Badge></div>
             <div className={styles.departmentTable}>
               <div className={styles.tableHead}><span>Vai trò</span><span>Nhân sự</span><span>Tỷ lệ ghi nhận</span><span>Check-out</span><span>Trạng thái</span></div>
               {attendanceByRole.map(([role, count]) => (

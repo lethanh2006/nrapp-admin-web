@@ -58,7 +58,7 @@
 .tableVisual { position: relative; display: grid; width: 48px; height: 48px; place-items: center; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); }
 .tableVisual span { position: absolute; right: -3px; bottom: -3px; display: grid; width: 20px; height: 20px; place-items: center; border: 2px solid white; border-radius: 999px; background: var(--brand-700); color: white; font-size: 12px; font-weight: 700; }
 .tableCopy { min-width: 0; }
-.tableCopy small { color: var(--slate-400); font-size: 12px; font-weight: 700; text-transform: uppercase; }
+.tableCopy small { color: var(--slate-600); font-size: 13px; font-weight: 400; }
 .tableCopy h3 { margin: 3px 0; color: var(--slate-900); font-size: 14px; }
 .tableCopy p { display: flex; align-items: center; gap: 4px; margin: 0 0 7px; color: var(--slate-500); font-size: 12px; }
 .statusSelect { grid-column: 1 / 3; border: 1px solid var(--slate-200); border-radius: 8px; padding: 0 8px; }
@@ -109,7 +109,6 @@
 @media (max-width: 430px) {
   .statsGrid { grid-template-columns: 1fr 1fr; gap: 8px; }
   .tabs button { padding-inline: 9px; }
-  .tabs button span { display: none; }
   .tableCard { grid-template-columns: auto minmax(0, 1fr); }
   .statusSelect { grid-column: 1 / -1; }
   .tableActions { grid-column: 1 / -1; grid-row: auto; }

@@ -8,7 +8,7 @@
 .brand small, .mobileBrand small { margin-top: 2px; color: var(--brand-700); font-size: 12px; font-weight: 700; }
 .visualCopy { max-width: 580px; margin: auto 0; padding: 70px 0; }
 .visualPill { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--brand-200); border-radius: 999px; padding: 7px 11px; background: white; color: var(--brand-800); font-size: 12px; font-weight: 700; }
-.visualCopy h1 { max-width: 560px; margin: 19px 0 0; font-size: clamp(38px,5vw,62px); font-weight: 700; letter-spacing: -.02em; line-height: 1.04; }
+.visualCopy h1 { max-width: 560px; margin: 19px 0 0; font-size: clamp(28px,3vw,36px); font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
 .visualCopy p { max-width: 520px; margin: 18px 0 0; color: var(--slate-600); font-size: 14px; line-height: 1.75; }
 .visualStats { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
 .visualStats div { border: 1px solid var(--brand-100); border-radius: 12px; padding: 13px; background: white; }

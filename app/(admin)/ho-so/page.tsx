@@ -173,7 +173,6 @@ export default function ProfilePage() {
             <span className={styles.verified}><Check size={12} /></span>
           </div>
           <div className={styles.heroCopy}>
-            <p>HDG WorkSpace</p>
             <h2>{profile.name}</h2>
             <div className={styles.heroMeta}>
               <span><BriefcaseBusiness size={13} /> {profile.position}</span>
@@ -204,7 +203,6 @@ export default function ProfilePage() {
           <section className={`${styles.card} ${styles.detailsCard}`}>
             <div className={styles.cardHeader}>
               <div>
-                <p>Hồ sơ tài khoản</p>
                 <h3>Thông tin cơ bản</h3>
               </div>
               <Badge tone="teal">{getRoleLabel(user?.role)}</Badge>
@@ -220,7 +218,7 @@ export default function ProfilePage() {
           <aside className={styles.sideColumn}>
             <section className={`${styles.card} ${styles.summaryCard}`}>
               <div className={styles.cardHeader}>
-                <div><p>Thông tin phiên</p><h3>Tài khoản hiện tại</h3></div>
+                <div><h3>Tài khoản hiện tại</h3></div>
               </div>
               <div className={styles.summaryStats}>
                 <div><strong>OTP</strong><span>Xác thực đăng nhập</span></div>
@@ -246,7 +244,7 @@ export default function ProfilePage() {
         <div className={styles.securityGrid} id="security-panel" role="tabpanel" aria-labelledby="security-tab">
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <div><p>Cài đặt bảo vệ</p><h3>Bảo mật đăng nhập</h3></div>
+              <div><h3>Bảo mật đăng nhập</h3></div>
               <span className={styles.secureLabel}><LockKeyhole size={14} /> An toàn</span>
             </div>
             <div className={styles.securityItem}>
@@ -263,7 +261,7 @@ export default function ProfilePage() {
 
           <section className={styles.card}>
             <div className={styles.cardHeader}>
-              <div><p>Thiết bị đăng nhập</p><h3>Phiên đang hoạt động</h3></div>
+              <div><h3>Phiên đang hoạt động</h3></div>
               <Badge tone="emerald" dot>Phiên hiện tại</Badge>
             </div>
             <div className={styles.sessionItem}>
@@ -278,7 +276,7 @@ export default function ProfilePage() {
       {tab === "notifications" ? (
         <section className={`${styles.card} ${styles.notificationsCard}`} id="notifications-panel" role="tabpanel" aria-labelledby="notifications-tab">
           <div className={styles.cardHeader}>
-            <div><p>Tùy chọn cá nhân</p><h3>Kênh thông báo</h3></div>
+            <div><h3>Kênh thông báo</h3></div>
             <Badge tone="slate">Chưa hỗ trợ</Badge>
           </div>
           <div className={styles.notificationUnavailable}>

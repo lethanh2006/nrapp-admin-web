@@ -32,9 +32,9 @@
 .filterButton { display: grid; width: 38px; height: 39px; cursor: pointer; place-items: center; border: 1px solid var(--slate-200); border-radius: 8px; background: white; color: var(--slate-500); }
 .filterButton:hover { background: var(--slate-50); }
 
-.tableHead { display: grid; grid-template-columns: minmax(260px, 1.85fr) minmax(145px, 1fr) 105px minmax(90px, .7fr) 130px 31px; align-items: center; gap: 11px; min-width: 800px; min-height: 34px; border-radius: 8px; padding: 0 9px; background: var(--slate-50); color: var(--slate-400); font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
+.tableHead { display: grid; grid-template-columns: minmax(240px, 1.7fr) minmax(160px, 1fr) 120px minmax(90px, .6fr) 152px 28px; align-items: center; gap: 11px; min-width: 800px; min-height: 34px; border-radius: 8px; padding: 0 9px; background: var(--slate-50); color: var(--slate-400); font-size: 12px; font-weight: 700; letter-spacing: .03em; text-transform: uppercase; }
 .taskList { min-width: 800px; }
-.taskRow { display: grid; grid-template-columns: minmax(260px, 1.85fr) minmax(145px, 1fr) 105px minmax(90px, .7fr) 130px 31px; align-items: center; gap: 11px; min-height: 94px; border-bottom: 1px solid var(--slate-100); padding: 9px; transition: background 150ms ease, transform 150ms ease; }
+.taskRow { display: grid; grid-template-columns: minmax(240px, 1.7fr) minmax(160px, 1fr) 120px minmax(90px, .6fr) 152px 28px; align-items: center; gap: 11px; min-height: 94px; border-bottom: 1px solid var(--slate-100); padding: 9px; transition: background 150ms ease, transform 150ms ease; }
 .taskRow:hover { border-radius: 8px; background: #fcfcfd; }
 .taskIdentity { display: flex; min-width: 0; gap: 10px; }
 .taskMark { width: 4px; height: 58px; flex: 0 0 auto; border-radius: 99px; }
@@ -161,3 +161,18 @@
   .modalBody { padding: 17px; }
   .modalFooter { padding: 13px 17px; }
 }
+
+/* Tab gạch chân và bảng công việc */
+.statusTabs { gap: 4px; }
+.statusTabs button { height: 44px; border-bottom: 2px solid transparent; border-radius: 0; padding: 0 12px; color: var(--slate-600); font-size: 14px; font-weight: 500; }
+.statusTabs button:hover { background: transparent; color: var(--slate-900); }
+.statusTabs button span { border-radius: 999px; }
+.statusTabs .statusTabActive { border-color: var(--brand-700); background: transparent; color: var(--brand-800); }
+.statusTabs .statusTabActive span { background: var(--brand-100); color: var(--brand-800); }
+.tableHead { color: var(--slate-600); font-size: 12px; font-weight: 500; }
+.taskRow { min-height: 80px; }
+.taskRow:hover { border-radius: 0; background: var(--slate-50); }
+.statusSelect { height: 32px; }
+.statusSelect select { font-size: 13px; font-weight: 500; }
+.assignee strong { color: var(--slate-900); font-size: 14px; font-weight: 500; }
+.assignee > div span { margin-top: 0; color: var(--slate-600); font-size: 13px; }
