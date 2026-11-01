@@ -35,14 +35,14 @@ const quickTools: {
   description: string;
   href: string;
   icon: LucideIcon;
-  tone: "red" | "blue" | "violet" | "amber";
+  tone: "teal" | "blue" | "violet" | "amber";
 }[] = [
   {
     title: "Tạo công việc",
     description: "Giao việc và đặt thời hạn",
     href: "/cong-viec",
     icon: ClipboardCheck,
-    tone: "red",
+    tone: "teal",
   },
   {
     title: "Duyệt lịch làm",
@@ -67,7 +67,7 @@ const quickTools: {
   },
 ];
 
-const requestTones: BadgeTone[] = ["red", "violet", "cyan"];
+const requestTones: BadgeTone[] = ["teal", "violet", "cyan"];
 
 export default function DashboardPage() {
   const { user } = useAuthSession();
@@ -124,7 +124,7 @@ export default function DashboardPage() {
       helper: `${activeEmployees} tài khoản hiện có`,
       trend: "Đồng bộ trực tiếp",
       icon: UsersRound,
-      tone: "red" as const,
+      tone: "teal" as const,
     },
     {
       label: "Công việc đang mở",
@@ -159,7 +159,7 @@ export default function DashboardPage() {
       detail: `${tasks[0].assignee} · ${tasks[0].id}`,
       time: tasks[0].due,
       icon: ClipboardCheck,
-      tone: "red",
+      tone: "teal",
     } : null,
     scheduleRequests[0] ? {
       title: "Gửi yêu cầu lịch làm mới",
@@ -181,14 +181,9 @@ export default function DashboardPage() {
     <div className={styles.page}>
       <section className={styles.hero}>
         <div className={styles.heroContent}>
-          <span className={styles.heroBadge}>
-            <span className={styles.heroBadgeDot} /> Trung tâm vận hành trực tuyến
-          </span>
           <p className={styles.heroEyebrow}>{new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</p>
           <h1>
-            {greeting},
-            <br />
-            <span>{user?.name ?? "Quản trị viên"}.</span>
+            {greeting}, <span>{user?.name ?? "Quản trị viên"}.</span>
           </h1>
           <p className={styles.heroDescription}>
             Dữ liệu được đồng bộ từ NRApp Gateway. Bạn có {pendingRequests.length} yêu cầu lịch làm đang chờ duyệt.
@@ -283,8 +278,8 @@ export default function DashboardPage() {
               >
                 <defs>
                   <linearGradient id="attendanceArea" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="#dc2626" stopOpacity="0.24" />
-                    <stop offset="100%" stopColor="#dc2626" stopOpacity="0" />
+                    <stop offset="0%" stopColor="#0f766e" stopOpacity="0.24" />
+                    <stop offset="100%" stopColor="#0f766e" stopOpacity="0" />
                   </linearGradient>
                 </defs>
                 {[18, 43, 68, 93].map((position) => (
