@@ -75,7 +75,7 @@
 }
 
 .heroPrimaryAction:hover {
-  background: var(--brand-700);
+  background: var(--brand-800);
 }
 
 .heroSecondaryAction {

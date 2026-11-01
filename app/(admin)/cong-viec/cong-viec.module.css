@@ -75,7 +75,7 @@
 .sideColumn { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
 .focusCard { overflow: hidden; border: 1px solid var(--slate-200); border-radius: 22px; padding: 20px; background: white; box-shadow: var(--shadow-sm); color: var(--slate-900); }
 .focusTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; }
-.focusTop > span { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); }
+.focusTop > span:first-child { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); }
 .darkKicker { color: var(--brand-700); }
 .focusCard h2 { color: var(--slate-900); font-size: 18px; line-height: 1.25; }
 .focusCard > p:not(.darkKicker) { margin: 9px 0 19px; color: var(--slate-600); font-size: 9px; line-height: 1.65; }

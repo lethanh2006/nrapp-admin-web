@@ -147,7 +147,7 @@ svg {
 }
 
 .button-primary:hover {
-  background: var(--brand-700);
+  background: var(--brand-800);
   transform: translateY(-1px);
 }
 
