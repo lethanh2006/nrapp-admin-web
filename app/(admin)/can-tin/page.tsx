@@ -56,7 +56,7 @@ const statusMeta: Record<ApiOrderStatus, { label: string; tone: BadgeTone }> = {
 };
 const tableStatusMeta: Record<ApiTableStatus, { label: string; tone: BadgeTone }> = {
   empty: { label: "Đang trống", tone: "emerald" },
-  occupied: { label: "Đang sử dụng", tone: "red" },
+  occupied: { label: "Đang sử dụng", tone: "blue" },
   reserved: { label: "Đã đặt trước", tone: "amber" },
 };
 

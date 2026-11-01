@@ -6,38 +6,21 @@
 }
 
 .introCard {
-  position: relative;
   display: flex;
   min-height: 148px;
   overflow: hidden;
   align-items: center;
   justify-content: space-between;
   gap: 30px;
-  border: 1px solid #8f2020;
+  border: 1px solid var(--slate-200);
   border-radius: 24px;
   padding: 25px 27px;
-  background:
-    radial-gradient(circle at 78% -50%, rgba(248, 113, 113, 0.35), transparent 44%),
-    linear-gradient(125deg, #450a0a 0%, #7f1d1d 72%, #991b1b 100%);
-  box-shadow: 0 18px 42px rgba(69, 10, 10, 0.16);
-  color: white;
+  background: white;
+  box-shadow: var(--shadow-sm);
+  color: var(--slate-900);
 }
 
 .introCard::before,
-.introCard::after {
-  position: absolute;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 50%;
-  content: "";
-}
-
-.introCard::before {
-  top: -110px;
-  right: 25%;
-  width: 240px;
-  height: 240px;
-}
-
 .introCard::after {
   right: -75px;
   bottom: -150px;
@@ -59,18 +42,16 @@
   height: 45px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(254, 202, 202, 0.17);
   border-radius: 14px;
-  background: rgba(255, 255, 255, 0.1);
-  color: #fecaca;
-  backdrop-filter: blur(8px);
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .introCopy p,
 .healthHeading p,
 .summaryHeading p {
   margin: 0 0 5px;
-  color: rgba(254, 226, 226, 0.58);
+  color: var(--brand-700);
   font-size: 8px;
   font-weight: 900;
   letter-spacing: 0.13em;
@@ -87,7 +68,7 @@
   display: block;
   max-width: 640px;
   margin-top: 8px;
-  color: rgba(255, 255, 255, 0.62);
+  color: var(--slate-600);
   font-size: 10px;
   line-height: 1.6;
 }
@@ -98,11 +79,10 @@
   min-width: 260px;
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.13);
+  border: 1px solid var(--slate-200);
   border-radius: 16px;
   padding: 13px 14px;
-  background: rgba(2, 6, 23, 0.21);
-  backdrop-filter: blur(10px);
+  background: var(--slate-50);
 }
 
 .statusPulse {
@@ -123,7 +103,7 @@
 }
 
 .introStatus small {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--slate-500);
   font-size: 7px;
   font-weight: 850;
   letter-spacing: 0.09em;
@@ -139,7 +119,7 @@
 }
 
 .introStatus > svg {
-  color: #6ee7b7;
+  color: #059669;
 }
 
 .toolGrid {
@@ -163,7 +143,7 @@
 }
 
 .toolCard:hover {
-  border-color: #fecaca;
+  border-color: var(--brand-200);
   box-shadow: 0 17px 38px rgba(15, 23, 42, 0.09);
   transform: translateY(-3px);
 }
@@ -175,7 +155,7 @@
   left: 0;
   width: 3px;
   border-radius: 0 999px 999px 0;
-  background: var(--red-600);
+  background: var(--brand-700);
   content: "";
 }
 
@@ -195,9 +175,9 @@
   border-radius: 15px;
 }
 
-.toolIcon_red {
-  background: #fef2f2;
-  color: #dc2626;
+.toolIcon_teal {
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .toolIcon_blue {
@@ -237,8 +217,8 @@
 }
 
 .toolCard:hover .openIcon {
-  background: var(--red-50);
-  color: var(--red-600);
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .toolCard h3 {
@@ -278,7 +258,7 @@
 }
 
 .toolCard:hover .toolFooter > span:last-child {
-  color: var(--red-600);
+  color: var(--brand-700);
 }
 
 .systemGrid {
@@ -309,7 +289,7 @@
 
 .healthHeading p,
 .summaryHeading p {
-  color: var(--red-600);
+  color: var(--brand-700);
 }
 
 .healthHeading h2,
@@ -487,7 +467,7 @@
   display: block;
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, #dc2626, #f87171);
+  background: var(--brand-700);
 }
 
 .summaryCard {
@@ -507,8 +487,8 @@
   height: 40px;
   place-items: center;
   border-radius: 13px;
-  background: var(--red-50);
-  color: var(--red-600);
+  background: var(--brand-50);
+  color: var(--brand-700);
 }
 
 .summaryMetrics {
@@ -595,8 +575,8 @@
   margin-top: auto;
   border-radius: 11px;
   padding: 8px 10px;
-  background: var(--red-50);
-  color: var(--red-700);
+  background: var(--brand-50);
+  color: var(--brand-800);
   font-size: 8px;
   font-weight: 850;
 }

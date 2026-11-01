@@ -55,7 +55,6 @@ export default function LoginPage() {
   return (
     <main className={styles.page}>
       <section className={styles.visualPanel}>
-        <div className={styles.visualImage} />
         <div className={styles.visualContent}>
           <div className={styles.brand}>
             <span>HD</span>

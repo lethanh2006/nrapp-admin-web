@@ -30,7 +30,7 @@ import { unwrapData, type ApiChatListItem, type ApiOrderPage, type ApiScheduleRe
 import type { BadgeTone } from "@/lib/types";
 import styles from "./tien-ich.module.css";
 
-type ToolAccent = "red" | "blue" | "violet" | "amber" | "emerald" | "slate";
+type ToolAccent = "teal" | "blue" | "violet" | "amber" | "emerald" | "slate";
 
 type Tool = {
   title: string;
@@ -87,9 +87,9 @@ export default function UtilitiesPage() {
       description: "Tạo, giao việc, theo dõi tiến độ và cân đối nguồn lực giữa các bộ phận.",
       href: "/cong-viec",
       icon: ClipboardList,
-      accent: "red",
+      accent: "teal",
       meta: `${openTasks} việc đang mở`,
-      tone: "red",
+      tone: "teal",
       featured: true,
     },
     {
@@ -221,7 +221,7 @@ export default function UtilitiesPage() {
                     <Icon size={23} />
                   </span>
                   {tool.featured ? (
-                    <Badge tone="red" dot>
+                    <Badge tone="teal" dot>
                       Dùng nhiều
                     </Badge>
                   ) : (

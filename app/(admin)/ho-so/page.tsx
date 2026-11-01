@@ -168,7 +168,6 @@ export default function ProfilePage() {
       />
 
       <section className={styles.profileHero}>
-        <div className={styles.heroOverlay} />
         <div className={styles.heroIdentity}>
           <div className={styles.heroAvatar}>
             <Avatar initials={initials} size="xl" />
@@ -209,7 +208,7 @@ export default function ProfilePage() {
                 <p>Hồ sơ tài khoản</p>
                 <h3>Thông tin cơ bản</h3>
               </div>
-              <Badge tone="red">{getRoleLabel(user?.role)}</Badge>
+              <Badge tone="teal">{getRoleLabel(user?.role)}</Badge>
             </div>
             <div className={styles.infoList}>
               <InfoRow icon={<UserRound size={17} />} label="Họ và tên" value={profile.name} />

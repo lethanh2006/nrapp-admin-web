@@ -129,7 +129,7 @@ export default function EmployeeDirectoryPage() {
 
       <section className={styles.stats} aria-label="Tổng quan tài khoản">
         <StatCard label="Tổng tài khoản" value={users.length} helper="trả về từ User Service" icon={<Users size={18} />} tone="blue" />
-        <StatCard label="Quản trị viên" value={adminCount} helper="có quyền vào trang admin" icon={<ShieldCheck size={18} />} tone="red" />
+        <StatCard label="Quản trị viên" value={adminCount} helper="có quyền vào trang admin" icon={<ShieldCheck size={18} />} tone="teal" />
         <StatCard label="Nhân viên" value={users.length - adminCount} helper="vai trò người dùng chuẩn" icon={<UserRound size={18} />} tone="emerald" />
         <StatCard label="Có email" value={`${completeEmailCount}/${users.length}`} helper="email công việc đã đồng bộ" icon={<Mail size={18} />} tone="violet" />
       </section>
@@ -153,7 +153,7 @@ export default function EmployeeDirectoryPage() {
             return <article className={styles.userRow} key={user._id}>
               <div className={styles.identity}><Avatar initials={initials(name)} tone={index % 2 ? "blue" : "slate"} size="md" /><div><strong>{name}</strong><small>Tài khoản đã đồng bộ</small></div></div>
               <div className={styles.email}><Mail size={14} /><span>{user.email || "Chưa có email"}</span></div>
-              <div><Badge tone={role === "admin" ? "red" : "blue"} dot>{roleLabels[role]}</Badge></div>
+              <div><Badge tone={role === "admin" ? "teal" : "blue"} dot>{roleLabels[role]}</Badge></div>
               <code>{user._id}</code>
               <div className={styles.actions}><button type="button" onClick={() => setEditor({ mode: "role", user, role })}><ShieldCheck size={14} /> Phân quyền</button><button className={styles.deleteButton} type="button" onClick={() => void removeUser(user)} disabled={busy === user._id} aria-label={`Xóa ${name}`}><Trash2 size={15} /></button></div>
             </article>;

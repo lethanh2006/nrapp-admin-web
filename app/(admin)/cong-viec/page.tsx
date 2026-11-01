@@ -64,7 +64,7 @@ const emptyForm = {
 };
 
 function taskTone(index: number): BadgeTone {
-  return (["violet", "blue", "amber", "cyan", "red"] as BadgeTone[])[index % 5];
+  return (["violet", "blue", "amber", "cyan", "teal"] as BadgeTone[])[index % 5];
 }
 
 export default function TasksPage() {
@@ -188,7 +188,7 @@ export default function TasksPage() {
       />
 
       <section className={styles.statsGrid} aria-label="Tổng quan công việc">
-        <StatCard label="Tổng công việc" value={taskItems.length} helper="theo dữ liệu máy chủ" icon={<ClipboardCheck size={18} />} tone="red" />
+        <StatCard label="Tổng công việc" value={taskItems.length} helper="theo dữ liệu máy chủ" icon={<ClipboardCheck size={18} />} tone="teal" />
         <StatCard label="Đang thực hiện" value={counts.in_progress} helper="đang được cập nhật" icon={<CircleDashed size={18} />} tone="blue" />
         <StatCard label="Cần thực hiện" value={counts.todo} helper="chưa bắt đầu" icon={<TimerReset size={18} />} tone="amber" />
         <StatCard label="Đã hoàn thành" value={completed} helper={`${averageProgress}% tiến độ trung bình`} icon={<CheckCircle2 size={18} />} tone="emerald" />
@@ -291,7 +291,7 @@ export default function TasksPage() {
           <section className={styles.focusCard}>
             <div className={styles.focusTop}>
               <span><Target size={19} /></span>
-              <Badge tone="red">Hiện tại</Badge>
+              <Badge tone="teal">Hiện tại</Badge>
             </div>
             <p className={styles.darkKicker}>Nhịp độ đội ngũ</p>
             <h2>Tiến độ đang đúng kế hoạch</h2>

@@ -9,21 +9,21 @@
 .statusTabs button { display: flex; min-width: max-content; height: 41px; align-items: center; gap: 7px; border-radius: 11px; padding: 0 12px; cursor: pointer; background: transparent; color: var(--slate-500); font-size: 10px; font-weight: 820; transition: background 150ms ease, color 150ms ease; }
 .statusTabs button:hover { background: var(--slate-50); color: var(--slate-700); }
 .statusTabs button span { display: grid; min-width: 20px; height: 19px; place-items: center; border-radius: 7px; background: var(--slate-100); color: var(--slate-500); font-size: 8px; }
-.statusTabs .statusTabActive { background: var(--slate-900); color: white; }
+.statusTabs .statusTabActive { background: var(--brand-700); color: white; }
 .statusTabs .statusTabActive span { background: rgba(255,255,255,.13); color: white; }
-.quickCreate { display: flex; min-height: 41px; flex: 0 0 auto; align-items: center; gap: 6px; border-radius: 11px; padding: 0 12px; cursor: pointer; background: var(--red-50); color: var(--red-700); font-size: 10px; font-weight: 850; }
+.quickCreate { display: flex; min-height: 41px; flex: 0 0 auto; align-items: center; gap: 6px; border-radius: 11px; padding: 0 12px; cursor: pointer; background: var(--brand-50); color: var(--brand-800); font-size: 10px; font-weight: 850; }
 
 .workspaceGrid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(260px, .52fr); gap: 16px; align-items: start; }
 .taskPanel { min-width: 0; padding: 19px; }
 .taskPanelHead, .sideHeading { display: flex; align-items: flex-start; justify-content: space-between; gap: 15px; }
-.kicker, .darkKicker { margin: 0 0 5px; color: var(--red-600); font-size: 8px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
+.kicker, .darkKicker { margin: 0 0 5px; color: var(--brand-700); font-size: 8px; font-weight: 900; letter-spacing: .14em; text-transform: uppercase; }
 .taskPanelHead h2, .sideHeading h2, .focusCard h2, .modalHeader h2 { margin: 0; color: var(--slate-900); font-size: 17px; font-weight: 900; letter-spacing: -.025em; }
 .resultMeta { display: flex; align-items: center; gap: 7px; color: var(--slate-400); font-size: 9px; font-weight: 750; }
 .liveDot { width: 7px; height: 7px; border-radius: 50%; background: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,.11); }
 
 .filters { display: grid; grid-template-columns: minmax(220px, 1fr) 155px 145px 38px; gap: 8px; margin: 16px 0 12px; }
 .searchBox, .selectWrap { display: flex; min-width: 0; height: 39px; align-items: center; gap: 7px; border: 1px solid var(--slate-200); border-radius: 11px; padding: 0 10px; background: var(--slate-50); color: var(--slate-400); transition: border-color 150ms ease, background 150ms ease, box-shadow 150ms ease; }
-.searchBox:focus-within, .selectWrap:focus-within { border-color: #fca5a5; background: white; box-shadow: 0 0 0 3px rgba(220,38,38,.06); }
+.searchBox:focus-within, .selectWrap:focus-within { border-color: var(--brand-500); background: white; box-shadow: 0 0 0 3px rgba(15, 118, 110,.06); }
 .searchBox input { min-width: 0; flex: 1; border: 0; outline: 0; background: transparent; color: var(--slate-800); font-size: 10px; }
 .searchBox input::placeholder { color: var(--slate-400); }
 .searchBox button { display: grid; width: 24px; height: 24px; flex: 0 0 auto; cursor: pointer; place-items: center; border-radius: 7px; background: white; color: var(--slate-400); }
@@ -41,7 +41,7 @@
 .mark_high { background: #ef4444; } .mark_medium { background: #f59e0b; } .mark_low { background: #cbd5e1; }
 .taskIdentity > div { min-width: 0; }
 .taskTitleLine { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
-.taskTitleLine > span { color: var(--red-600); font-size: 8px; font-weight: 900; letter-spacing: .05em; }
+.taskTitleLine > span { color: var(--brand-700); font-size: 8px; font-weight: 900; letter-spacing: .05em; }
 .taskTitleLine :global(.badge) { transform: scale(.9); }
 .taskIdentity > div > strong { display: block; overflow: hidden; color: var(--slate-800); font-size: 11px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
 .taskIdentity p { overflow: hidden; margin: 5px 0 0; color: var(--slate-400); font-size: 8px; line-height: 1.5; text-overflow: ellipsis; white-space: nowrap; }
@@ -70,22 +70,21 @@
 .emptyState > span { display: grid; width: 53px; height: 53px; place-items: center; border-radius: 17px; background: var(--slate-100); color: var(--slate-400); }
 .emptyState strong { margin-top: 13px; color: var(--slate-700); font-size: 12px; }
 .emptyState p { margin: 5px 0 13px; color: var(--slate-400); font-size: 9px; }
-.emptyState button { border-radius: 10px; padding: 9px 12px; cursor: pointer; background: var(--red-50); color: var(--red-700); font-size: 9px; font-weight: 850; }
+.emptyState button { border-radius: 10px; padding: 9px 12px; cursor: pointer; background: var(--brand-50); color: var(--brand-800); font-size: 9px; font-weight: 850; }
 
 .sideColumn { display: flex; min-width: 0; flex-direction: column; gap: 14px; }
-.focusCard { overflow: hidden; border-radius: 22px; padding: 20px; background: radial-gradient(circle at 90% 5%, rgba(239,68,68,.32), transparent 34%), linear-gradient(150deg, #450a0a, #7f1d1d); box-shadow: 0 18px 38px rgba(69,10,10,.15); color: white; }
+.focusCard { overflow: hidden; border: 1px solid var(--slate-200); border-radius: 22px; padding: 20px; background: white; box-shadow: var(--shadow-sm); color: var(--slate-900); }
 .focusTop { display: flex; align-items: center; justify-content: space-between; margin-bottom: 19px; }
-.focusTop > span { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: rgba(255,255,255,.11); color: #fecaca; }
-.focusTop :global(.badge) { border-color: rgba(255,255,255,.12); background: rgba(255,255,255,.09); color: #fecaca; }
-.darkKicker { color: #fca5a5; }
-.focusCard h2 { color: white; font-size: 18px; line-height: 1.25; }
-.focusCard > p:not(.darkKicker) { margin: 9px 0 19px; color: rgba(255,255,255,.58); font-size: 9px; line-height: 1.65; }
+.focusTop > span { display: grid; width: 39px; height: 39px; place-items: center; border-radius: 12px; background: var(--brand-50); color: var(--brand-700); }
+.darkKicker { color: var(--brand-700); }
+.focusCard h2 { color: var(--slate-900); font-size: 18px; line-height: 1.25; }
+.focusCard > p:not(.darkKicker) { margin: 9px 0 19px; color: var(--slate-600); font-size: 9px; line-height: 1.65; }
 .focusScore { display: flex; align-items: flex-end; justify-content: space-between; }
 .focusScore strong { font-size: 25px; font-weight: 950; letter-spacing: -.04em; }
-.focusScore span { color: rgba(255,255,255,.5); font-size: 8px; }
-.focusProgress { height: 7px; overflow: hidden; margin: 8px 0 17px; border-radius: 99px; background: rgba(255,255,255,.12); }
-.focusProgress span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #fca5a5, white); }
-.focusCard button { display: flex; width: 100%; min-height: 39px; align-items: center; justify-content: center; gap: 7px; border: 1px solid rgba(255,255,255,.12); border-radius: 11px; cursor: pointer; background: rgba(255,255,255,.09); color: white; font-size: 9px; font-weight: 850; }
+.focusScore span { color: var(--slate-600); font-size: 8px; }
+.focusProgress { height: 7px; overflow: hidden; margin: 8px 0 17px; border-radius: 99px; background: var(--slate-100); }
+.focusProgress span { display: block; height: 100%; border-radius: inherit; background: var(--brand-700); }
+.focusCard button { display: flex; width: 100%; min-height: 39px; align-items: center; justify-content: center; gap: 7px; border: 1px solid var(--brand-100); border-radius: 11px; cursor: pointer; background: var(--brand-50); color: var(--brand-800); font-size: 9px; font-weight: 850; }
 .workloadCard, .deadlineCard { padding: 17px; }
 .sideHeading svg { color: var(--slate-400); }
 .sideHeading h2 { font-size: 14px; }
@@ -94,10 +93,10 @@
 .workloadItem strong { color: var(--slate-700); font-size: 9px; }
 .workloadItem span { color: var(--slate-400); font-size: 8px; }
 .workloadItem > div:last-child { height: 6px; overflow: hidden; border-radius: 99px; background: var(--slate-100); }
-.workloadItem > div:last-child span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--red-700), #ef4444); }
+.workloadItem > div:last-child span { display: block; height: 100%; border-radius: inherit; background: var(--brand-700); }
 .deadlineList { margin-top: 12px; }
 .deadlineList > div { display: grid; grid-template-columns: 38px minmax(0, 1fr) auto; align-items: center; gap: 8px; min-height: 57px; border-top: 1px solid var(--slate-100); }
-.dateTile { display: grid; width: 36px; height: 39px; place-items: center; border-radius: 10px; background: var(--red-50); color: var(--red-700); }
+.dateTile { display: grid; width: 36px; height: 39px; place-items: center; border-radius: 10px; background: var(--brand-50); color: var(--brand-800); }
 .dateTile strong { font-size: 11px; line-height: 1; }
 .dateTile small { font-size: 7px; }
 .deadlineList p { min-width: 0; margin: 0; }
@@ -106,7 +105,7 @@
 
 .modal { width: min(100%, 650px); }
 .modalHeader { position: relative; display: flex; align-items: center; gap: 11px; border-bottom: 1px solid var(--slate-100); padding: 20px 22px; }
-.modalTitleIcon { display: grid; width: 43px; height: 43px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: var(--red-50); color: var(--red-600); }
+.modalTitleIcon { display: grid; width: 43px; height: 43px; flex: 0 0 auto; place-items: center; border-radius: 14px; background: var(--brand-50); color: var(--brand-700); }
 .modalHeader > div:nth-child(2) { flex: 1; }
 .modalHeader h2 { font-size: 18px; }
 .modalHeader p:not(.kicker) { margin: 4px 0 0; color: var(--slate-400); font-size: 9px; }

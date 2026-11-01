@@ -254,7 +254,7 @@ export default function SchedulePage() {
                 const status = requestStatus(request.status);
                 return (
                   <article className={styles.requestItem} key={request.id}>
-                    <Avatar initials={request.initial} tone={request.role === "Quản trị viên" ? "red" : "blue"} size="md" />
+                    <Avatar initials={request.initial} tone={request.role === "Quản trị viên" ? "teal" : "blue"} size="md" />
                     <div className={styles.requestPerson}>
                       <strong>{request.employee}</strong>
                       <span>{request.role} · {request.id}</span>
