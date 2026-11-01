@@ -167,6 +167,6 @@
   .mobileBottomNav a:first-child { justify-self: start; }
   .mobileBottomNav a:last-child { justify-self: end; }
   .mobileBottomNav .mobileNavActive { color: var(--brand-800); }
-  .scanButton { position: relative; top: -17px; display: grid; width: 56px; height: 56px; cursor: pointer; place-items: center; justify-self: center; border: 5px solid var(--canvas); border-radius: 18px; background: var(--brand-800); color: white; box-shadow: 0 9px 20px rgba(15, 118, 110,.32); }
+  .scanButton { position: relative; top: -17px; display: grid; width: 56px; height: 56px; cursor: pointer; place-items: center; justify-self: center; border: 5px solid var(--canvas); border-radius: 18px; background: var(--brand-700); color: white; box-shadow: 0 9px 20px rgba(15, 118, 110,.32); }
   .qrModal { padding: 24px 18px; }
 }

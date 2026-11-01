@@ -1,4 +1,4 @@
-.profileHero { position: relative; display: flex; min-height: 200px; align-items: flex-end; justify-content: space-between; gap: 28px; overflow: hidden; border: 1px solid var(--slate-200); border-radius: 26px; padding: 30px; background: white; box-shadow: var(--shadow-sm); color: var(--slate-900); }
+.profileHero { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 28px; overflow: hidden; border: 1px solid var(--slate-200); border-radius: 26px; padding: 30px; background: white; box-shadow: var(--shadow-sm); color: var(--slate-900); }
 .heroIdentity { position: relative; z-index: 1; display: flex; align-items: center; gap: 20px; }
 .heroAvatar { position: relative; }
 .heroAvatar > span:first-child { border-color: var(--brand-200); background: var(--brand-700); color: white; }

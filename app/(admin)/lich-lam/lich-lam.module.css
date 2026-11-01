@@ -19,7 +19,7 @@
 .tabs::-webkit-scrollbar { display: none; }
 .tabs button { display: flex; min-width: 132px; height: 42px; flex: 1 0 auto; align-items: center; justify-content: center; gap: 7px; border-radius: 11px; cursor: pointer; background: transparent; color: var(--slate-500); font-size: 11px; font-weight: 820; transition: background 160ms ease, color 160ms ease, box-shadow 160ms ease; }
 .tabs button:hover { background: var(--slate-50); color: var(--slate-700); }
-.tabs .tabActive { background: var(--brand-800); color: white; box-shadow: 0 7px 15px rgba(15, 118, 110, .18); }
+.tabs .tabActive { background: var(--brand-700); color: white; box-shadow: 0 7px 15px rgba(15, 118, 110, .18); }
 .tabs button em { display: grid; min-width: 20px; height: 19px; place-items: center; border-radius: 7px; background: rgba(255, 255, 255, .18); font-size: 9px; font-style: normal; }
 
 .approvalLayout, .formsLayout { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(270px, .65fr); gap: 16px; align-items: start; }
@@ -158,7 +158,7 @@
 .barColumn strong { align-self: end; font-size: 9px; }
 .barColumn small { color: var(--slate-400); font-size: 7px; }
 .insightPanel { overflow: hidden; background: white; }
-.insightIcon { display: grid; width: 44px; height: 44px; margin-bottom: 17px; place-items: center; border-radius: 14px; background: var(--brand-800); color: white; box-shadow: 0 9px 18px rgba(15, 118, 110,.2); }
+.insightIcon { display: grid; width: 44px; height: 44px; margin-bottom: 17px; place-items: center; border-radius: 14px; background: var(--brand-700); color: white; box-shadow: 0 9px 18px rgba(15, 118, 110,.2); }
 .insightPanel > p:not(.kicker) { margin: 10px 0 20px; color: var(--slate-500); font-size: 10px; line-height: 1.65; }
 .insightMetric { display: flex; align-items: flex-end; justify-content: space-between; }
 .insightMetric span { color: var(--slate-500); font-size: 9px; font-weight: 750; }

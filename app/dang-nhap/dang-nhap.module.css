@@ -31,7 +31,7 @@
 .formOptions label { display: flex; align-items: center; gap: 7px; color: var(--slate-500); font-size: 9px; font-weight: 700; }
 .formOptions input { accent-color: var(--brand-700); }
 .formOptions button { cursor: pointer; background: transparent; color: var(--brand-700); font-size: 9px; font-weight: 850; }
-.submitButton { display: flex; width: 100%; height: 50px; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-radius: 15px; background: var(--brand-800); color: white; box-shadow: 0 11px 23px rgba(15, 118, 110,.23); font-size: 12px; font-weight: 900; transition: transform 160ms ease,background 160ms ease; }
+.submitButton { display: flex; width: 100%; height: 50px; align-items: center; justify-content: center; gap: 8px; cursor: pointer; border-radius: 15px; background: var(--brand-700); color: white; box-shadow: 0 11px 23px rgba(15, 118, 110,.23); font-size: 12px; font-weight: 900; transition: transform 160ms ease,background 160ms ease; }
 .submitButton:hover { transform: translateY(-1px); background: var(--brand-800); }
 .submitButton:disabled { cursor: wait; opacity: .72; transform: none; }
 .spinner { width: 19px; height: 19px; border: 2px solid rgba(255,255,255,.35); border-top-color: white; border-radius: 50%; animation: spin .7s linear infinite; }
