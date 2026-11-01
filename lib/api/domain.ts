@@ -3,7 +3,7 @@ import type { BadgeTone, CanteenOrder, Employee, ScheduleRequest, Task } from "@
 export type ApiUser = { _id: string; name?: string; username?: string; email?: string; role?: string };
 export type ApiTask = {
   _id: string; title: string; description?: string; status: "todo" | "in_progress" | "done" | "cancelled";
-  priority: "low" | "medium" | "high"; assignedTo?: string | ApiUser; createdBy?: string | ApiUser;
+  priority: "low" | "medium" | "high" | "urgent"; assignedTo?: string | ApiUser; createdBy?: string | ApiUser;
   deadline?: string; createdAt?: string; updatedAt?: string;
 };
 export type ApiTaskPage = { tasks: ApiTask[]; pagination?: { total: number } };
