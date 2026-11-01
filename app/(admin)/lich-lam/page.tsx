@@ -179,7 +179,6 @@ export default function SchedulePage() {
       ) : null}
 
       <PageHeader
-        eyebrow="Quản trị vận hành"
         title="Lịch làm & chấm công"
         description="Theo dõi nhân sự theo thời gian thực, xử lý yêu cầu và kiểm soát lịch làm trong một màn hình."
         actions={

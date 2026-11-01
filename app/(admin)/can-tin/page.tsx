@@ -263,7 +263,6 @@ export default function CanteenAdminPage() {
     <div className={styles.page}>
       {notice ? <div className={styles.toast} role="status"><CheckCircle2 size={17} /><span>{notice}</span><button type="button" onClick={() => setNotice("")}><X size={14} /></button></div> : null}
       <PageHeader
-        eyebrow="Căn tin / Vận hành"
         title="Quản lý căn tin"
         description="Theo dõi đơn tiền mặt, thực đơn, danh mục và bàn ăn đúng theo dữ liệu backend hiện có."
         actions={<button className="button-secondary" type="button" onClick={() => void loadCanteen()} disabled={loading}><RefreshCw size={16} /> {loading ? "Đang đồng bộ" : "Làm mới"}</button>}

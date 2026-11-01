@@ -168,7 +168,6 @@ export default function UtilitiesPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        eyebrow="Workspace / Công cụ"
         title="Trung tâm tiện ích"
         description="Truy cập nhanh mọi công cụ điều hành và theo dõi sức khỏe hệ thống từ một nơi."
         actions={

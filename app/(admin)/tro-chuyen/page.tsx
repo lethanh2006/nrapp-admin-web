@@ -160,7 +160,6 @@ export default function ChatPage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Kết nối nội bộ"
         title="Trò chuyện"
         description="Trao đổi nhanh với nhân sự và theo dõi hội thoại trong cùng một không gian làm việc."
         actions={<Badge tone={chatLoadState === "error" ? "red" : "slate"}>{chatLoadState === "loading" ? "Đang đồng bộ..." : chatLoadState === "error" ? "Không đồng bộ được" : `${conversationItems.length} cuộc trò chuyện`}</Badge>}

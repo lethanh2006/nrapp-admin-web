@@ -17,8 +17,6 @@ import {
   PanelLeftOpen,
   ScanLine,
   Search,
-  Settings,
-  Sparkles,
   UserCircle,
   Users,
   UtensilsCrossed,
@@ -104,14 +102,6 @@ function SidebarContent({
         </button>
       </div>
 
-      <div className={styles.workspaceCard}>
-        <span className={styles.workspaceIcon}><Sparkles size={15} /></span>
-        <span className={styles.workspaceCopy}>
-          <small>Không gian làm việc</small>
-          <strong>HDG Group</strong>
-        </span>
-        <ChevronLeft className={styles.workspaceChevron} size={15} />
-      </div>
 
       <nav className={styles.nav} aria-label="Điều hướng quản trị">
         {navigation.map((group) => (
@@ -129,7 +119,7 @@ function SidebarContent({
                   onClick={onNavigate}
                   title={collapsed ? item.label : undefined}
                 >
-                  <Icon size={19} strokeWidth={active ? 2.4 : 2} />
+                  <Icon size={18} strokeWidth={2} />
                   <span className={styles.navText}>{item.label}</span>
                   {count ? <span className={styles.navBadge}>{count > 99 ? "99+" : count}</span> : null}
                 </Link>
@@ -146,7 +136,6 @@ function SidebarContent({
             <strong>{user.name}</strong>
             <small>{getRoleLabel(user.role)}</small>
           </span>
-          <Settings className={styles.userSettings} size={16} />
         </Link>
         <button type="button" className={styles.logoutButton} title="Đăng xuất" aria-label="Đăng xuất" onClick={onLogout} disabled={logoutPending}>
           <LogOut size={18} />
@@ -356,7 +345,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <Menu size={20} />
             </button>
             <div>
-              <p className={styles.topbarEyebrow}>Khu vực quản lý</p>
               <strong className={styles.topbarTitle}>{pageTitle}</strong>
             </div>
           </div>

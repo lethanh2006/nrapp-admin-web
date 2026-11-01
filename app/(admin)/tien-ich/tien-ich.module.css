@@ -13,7 +13,7 @@
   justify-content: space-between;
   gap: 30px;
   border: 1px solid var(--slate-200);
-  border-radius: 24px;
+  border-radius: 12px;
   padding: 25px 27px;
   background: white;
   box-shadow: var(--shadow-sm);
@@ -42,7 +42,7 @@
   height: 45px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 12px;
   background: var(--brand-50);
   color: var(--brand-700);
 }
@@ -52,16 +52,15 @@
 .summaryHeading p {
   margin: 0 0 5px;
   color: var(--brand-700);
-  font-size: 8px;
-  font-weight: 900;
-  letter-spacing: 0.13em;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .introCopy h2 {
   margin: 0;
   font-size: clamp(20px, 3vw, 27px);
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-weight: 700;
+  letter-spacing: -.02em;
 }
 
 .introCopy > div > span {
@@ -69,7 +68,7 @@
   max-width: 640px;
   margin-top: 8px;
   color: var(--slate-600);
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -80,7 +79,7 @@
   align-items: center;
   gap: 10px;
   border: 1px solid var(--slate-200);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 13px 14px;
   background: var(--slate-50);
 }
@@ -104,16 +103,15 @@
 
 .introStatus small {
   color: var(--slate-500);
-  font-size: 7px;
-  font-weight: 850;
-  letter-spacing: 0.09em;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .introStatus strong {
   overflow: hidden;
   margin-top: 3px;
-  font-size: 10px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -135,7 +133,7 @@
   min-height: 222px;
   flex-direction: column;
   border: 1px solid var(--slate-200);
-  border-radius: 20px;
+  border-radius: 12px;
   padding: 18px;
   background: white;
   box-shadow: var(--shadow-sm);
@@ -144,8 +142,7 @@
 
 .toolCard:hover {
   border-color: var(--brand-200);
-  box-shadow: 0 17px 38px rgba(15, 23, 42, 0.09);
-  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
 }
 
 .toolCardFeatured::before {
@@ -172,7 +169,7 @@
   height: 48px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 15px;
+  border-radius: 12px;
 }
 
 .toolIcon_teal {
@@ -210,7 +207,7 @@
   width: 31px;
   height: 31px;
   place-items: center;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--slate-50);
   color: var(--slate-400);
   transition: background-color 160ms ease, color 160ms ease;
@@ -224,15 +221,15 @@
 .toolCard h3 {
   margin: 17px 0 0;
   color: var(--slate-900);
-  font-size: 15px;
-  font-weight: 900;
+  font-size: 16px;
+  font-weight: 700;
   letter-spacing: -0.025em;
 }
 
 .toolCard > p {
   margin: 7px 0 16px;
   color: var(--slate-500);
-  font-size: 10px;
+  font-size: 13px;
   line-height: 1.58;
 }
 
@@ -252,8 +249,8 @@
   align-items: center;
   gap: 4px;
   color: var(--slate-400);
-  font-size: 8px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
   transition: color 160ms ease;
 }
 
@@ -272,7 +269,7 @@
 .summaryCard {
   min-width: 0;
   border: 1px solid var(--slate-200);
-  border-radius: 22px;
+  border-radius: 12px;
   padding: 20px;
   background: white;
   box-shadow: var(--shadow-sm);
@@ -296,8 +293,8 @@
 .summaryHeading h2 {
   margin: 0;
   color: var(--slate-900);
-  font-size: 17px;
-  font-weight: 900;
+  font-size: 18px;
+  font-weight: 700;
   letter-spacing: -0.025em;
 }
 
@@ -305,7 +302,7 @@
   display: block;
   margin-top: 4px;
   color: var(--slate-400);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .healthContent {
@@ -352,27 +349,27 @@
 
 .healthRing strong {
   color: var(--slate-900);
-  font-size: 25px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
 }
 
 .healthRing small {
   color: var(--slate-400);
-  font-size: 8px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .healthScore > div:last-child > strong {
   color: var(--slate-800);
-  font-size: 11px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .healthScore p {
   margin: 6px 0 8px;
   color: var(--slate-500);
-  font-size: 8px;
+  font-size: 12px;
   line-height: 1.5;
 }
 
@@ -381,8 +378,8 @@
   align-items: center;
   gap: 5px;
   color: #047857;
-  font-size: 8px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .serviceList {
@@ -405,7 +402,7 @@
   height: 35px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 8px;
 }
 
 .serviceIcon_emerald {
@@ -439,20 +436,20 @@
 
 .serviceCopy strong {
   color: var(--slate-700);
-  font-size: 9px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .serviceCopy small {
   margin-top: 2px;
   color: var(--slate-400);
-  font-size: 7px;
+  font-size: 12px;
 }
 
 .serviceCopy > span small {
   margin: 0;
   color: var(--slate-600);
-  font-weight: 850;
+  font-weight: 700;
 }
 
 .serviceCopy i {
@@ -486,7 +483,7 @@
   width: 40px;
   height: 40px;
   place-items: center;
-  border-radius: 13px;
+  border-radius: 8px;
   background: var(--brand-50);
   color: var(--brand-700);
 }
@@ -504,23 +501,23 @@
   flex-direction: column;
   justify-content: center;
   border: 1px solid var(--slate-100);
-  border-radius: 13px;
+  border-radius: 8px;
   padding: 10px 11px;
   background: var(--slate-50);
 }
 
 .summaryMetrics span {
   color: var(--slate-500);
-  font-size: 8px;
-  font-weight: 750;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .summaryMetrics strong {
   margin-top: 5px;
   color: var(--slate-900);
-  font-size: 19px;
-  font-weight: 900;
-  letter-spacing: -0.035em;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -.02em;
 }
 
 .backupNote {
@@ -530,7 +527,7 @@
   gap: 9px;
   margin-top: 11px;
   border: 1px solid var(--slate-100);
-  border-radius: 13px;
+  border-radius: 8px;
   padding: 9px;
 }
 
@@ -540,7 +537,7 @@
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 8px;
   background: #ecfdf5;
   color: #059669;
 }
@@ -554,16 +551,15 @@
 
 .backupNote small {
   color: var(--slate-400);
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .backupNote strong {
   margin-top: 2px;
   color: var(--slate-700);
-  font-size: 9px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .supportLink {
@@ -573,12 +569,12 @@
   justify-content: center;
   gap: 6px;
   margin-top: auto;
-  border-radius: 11px;
+  border-radius: 8px;
   padding: 8px 10px;
   background: var(--brand-50);
   color: var(--brand-800);
-  font-size: 8px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (max-width: 1120px) {
@@ -633,7 +629,7 @@
 
   .introCard {
     min-height: 0;
-    border-radius: 20px;
+    border-radius: 12px;
     padding: 20px;
   }
 
@@ -648,13 +644,13 @@
 
   .toolCard {
     min-height: 205px;
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 16px;
   }
 
   .healthCard,
   .summaryCard {
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 16px;
   }
 

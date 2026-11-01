@@ -176,7 +176,6 @@ export default function TasksPage() {
       {notice ? <div className={styles.toast} role="status"><CheckCircle2 size={17} /><span>{notice}</span></div> : null}
 
       <PageHeader
-        eyebrow="Không gian cộng tác"
         title="Điều phối công việc"
         description="Giao việc, theo dõi tiến độ và tháo gỡ điểm nghẽn cho toàn bộ đội ngũ."
         actions={

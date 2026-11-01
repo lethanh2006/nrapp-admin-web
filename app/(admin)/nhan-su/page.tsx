@@ -119,7 +119,6 @@ export default function EmployeeDirectoryPage() {
     <div className={styles.page}>
       {notice ? <div className={styles.toast} role="status"><CheckCircle2 size={17} /><span>{notice}</span><button type="button" onClick={() => setNotice("")}><X size={14} /></button></div> : null}
       <PageHeader
-        eyebrow="Tổ chức / Tài khoản"
         title="Quản lý nhân sự"
         description="Tạo tài khoản, tra cứu danh bạ và phân quyền theo đúng hai vai trò mà backend hỗ trợ."
         actions={<><button className="button-secondary" type="button" onClick={() => void loadUsers()} disabled={loading}><RefreshCw size={16} /> Làm mới</button><button className="button-primary" type="button" onClick={() => setEditor({ mode: "create", username: "", email: "", password: "", role: "user" })}><Plus size={16} /> Tạo tài khoản</button></>}

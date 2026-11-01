@@ -157,7 +157,6 @@ export default function ProfilePage() {
   return (
     <div>
       <PageHeader
-        eyebrow="Tài khoản quản trị"
         title="Hồ sơ cá nhân"
         description="Quản lý thông tin cá nhân và bảo mật đăng nhập."
         actions={

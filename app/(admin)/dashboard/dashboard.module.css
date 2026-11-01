@@ -11,7 +11,7 @@
   align-items: center;
   gap: 28px;
   border: 1px solid var(--slate-200);
-  border-radius: 22px;
+  border-radius: 12px;
   padding: 22px 24px;
   background: white;
   box-shadow: var(--shadow-sm);
@@ -24,16 +24,16 @@
 .heroEyebrow {
   margin: 0 0 6px;
   color: var(--slate-500);
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .hero h1 {
   margin: 0;
   color: var(--slate-900);
   font-size: clamp(24px, 2.4vw, 30px);
-  font-weight: 800;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -.02em;
   line-height: 1.2;
 }
 
@@ -62,10 +62,10 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 11px;
+  border-radius: 8px;
   padding: 0 15px;
-  font-size: 13px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 600;
   transition: background-color 160ms ease;
 }
 
@@ -91,7 +91,7 @@
 .heroSnapshot {
   min-width: 0;
   border: 1px solid var(--slate-200);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 16px;
   background: var(--slate-50);
 }
@@ -111,16 +111,15 @@
 
 .snapshotTop small {
   color: var(--slate-500);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .snapshotTop strong {
   margin-top: 2px;
   color: var(--slate-900);
   font-size: 14px;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .snapshotIcon {
@@ -129,7 +128,7 @@
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 8px;
   background: var(--brand-50);
   color: var(--brand-700);
 }
@@ -143,15 +142,15 @@
 
 .snapshotScore strong {
   color: var(--slate-900);
-  font-size: 28px;
-  font-weight: 800;
-  letter-spacing: -0.04em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
 }
 
 .snapshotScore span {
   color: var(--slate-600);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .snapshotTrack {
@@ -176,8 +175,8 @@
   gap: 10px;
   margin-top: 11px;
   color: var(--slate-600);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 500;
 }
 
 .snapshotMeta span:first-child {
@@ -207,7 +206,7 @@
 .activityPanel {
   min-width: 0;
   border: 1px solid var(--slate-200);
-  border-radius: 22px;
+  border-radius: 12px;
   padding: 20px;
   background: white;
   box-shadow: var(--shadow-sm);
@@ -229,15 +228,15 @@
 
 .chartSummary strong {
   color: var(--slate-900);
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: -0.04em;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -.02em;
 }
 
 .chartSummary span {
   color: var(--slate-400);
-  font-size: 9px;
-  font-weight: 750;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .chartTrend {
@@ -248,8 +247,8 @@
   padding: 6px 9px;
   background: #ecfdf5;
   color: #047857 !important;
-  font-size: 9px !important;
-  font-weight: 850 !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
 }
 
 .chartFrame {
@@ -268,8 +267,8 @@
   justify-content: space-between;
   padding-top: 2px;
   color: var(--slate-400);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .chartCanvas {
@@ -314,8 +313,8 @@
   grid-template-columns: repeat(7, 1fr);
   margin-top: 7px;
   color: var(--slate-400);
-  font-size: 8px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .xAxis span {
@@ -341,8 +340,8 @@
   border-top: 1px solid var(--slate-100);
   padding-top: 13px;
   color: var(--slate-500);
-  font-size: 8px;
-  font-weight: 750;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .chartFooter > span {
@@ -368,7 +367,7 @@
 .chartFooter small {
   margin-left: auto;
   color: var(--slate-400);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .requestList {
@@ -388,7 +387,7 @@
 
 .requestItem:hover {
   margin-inline: -7px;
-  border-radius: 13px;
+  border-radius: 8px;
   padding-inline: 10px;
   background: var(--slate-50);
 }
@@ -411,8 +410,8 @@
 .requestNameRow strong {
   overflow: hidden;
   color: var(--slate-800);
-  font-size: 11px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -420,16 +419,16 @@
 .requestNameRow small,
 .requestSchedule {
   color: var(--slate-400);
-  font-size: 8px;
-  font-weight: 700;
+  font-size: 12px;
+  font-weight: 600;
   white-space: nowrap;
 }
 
 .requestKind {
   margin-top: 4px;
   color: var(--slate-600);
-  font-size: 9px;
-  font-weight: 800;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .requestSchedule {
@@ -449,11 +448,11 @@
   gap: 7px;
   margin-top: 14px;
   border: 1px solid var(--brand-100);
-  border-radius: 12px;
+  border-radius: 8px;
   background: var(--brand-50);
   color: var(--brand-800);
-  font-size: 10px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
   transition: border-color 160ms ease, background-color 160ms ease;
 }
 
@@ -474,7 +473,7 @@
   align-items: center;
   gap: 11px;
   border: 1px solid var(--slate-100);
-  border-radius: 16px;
+  border-radius: 12px;
   padding: 13px;
   background: var(--slate-50);
   color: var(--slate-300);
@@ -485,7 +484,6 @@
   border-color: var(--slate-200);
   background: white;
   color: var(--brand-700);
-  transform: translateY(-1px);
   box-shadow: var(--shadow-sm);
 }
 
@@ -495,7 +493,7 @@
   height: 40px;
   flex: 0 0 auto;
   place-items: center;
-  border-radius: 13px;
+  border-radius: 8px;
 }
 
 .quickToolIcon_teal {
@@ -527,15 +525,15 @@
 
 .quickToolCopy strong {
   color: var(--slate-800);
-  font-size: 10px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .quickToolCopy small {
   overflow: hidden;
   margin-top: 3px;
   color: var(--slate-400);
-  font-size: 8px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -570,7 +568,7 @@
   flex: 0 0 auto;
   place-items: center;
   border: 3px solid white;
-  border-radius: 12px;
+  border-radius: 8px;
 }
 
 .activityIcon_teal {
@@ -596,15 +594,15 @@
 
 .activityCopy strong {
   color: var(--slate-800);
-  font-size: 10px;
-  font-weight: 850;
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .activityCopy span {
   overflow: hidden;
   margin-top: 3px;
   color: var(--slate-500);
-  font-size: 8px;
+  font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -612,7 +610,7 @@
 .activityCopy small {
   margin-top: 4px;
   color: var(--slate-400);
-  font-size: 8px;
+  font-size: 12px;
 }
 
 .activityCta {
@@ -621,8 +619,8 @@
   gap: 6px;
   margin-top: 7px;
   color: var(--brand-700);
-  font-size: 9px;
-  font-weight: 850;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 @media (max-width: 1180px) {
@@ -662,7 +660,7 @@
   }
 
   .hero {
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 18px 16px;
   }
 
@@ -679,7 +677,7 @@
   .requestCard,
   .toolsPanel,
   .activityPanel {
-    border-radius: 18px;
+    border-radius: 12px;
     padding: 15px;
   }
 
