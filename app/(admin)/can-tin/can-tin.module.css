@@ -125,3 +125,16 @@
   .cardGrid, .tableGrid { gap: 10px; padding: 12px; }
   .tabs button { min-height: 44px; }
 }
+
+@media (max-width: 900px) {
+  .iconButton, .entityActions button, .tableActions button { min-width: 40px; height: 40px; }
+}
+
+@media (max-width: 900px) {
+  .statusSelect select { height: 40px; }
+  .modalHeader > button { width: 40px; height: 40px; }
+}
+
+@media (max-width: 900px) {
+  .rowActions > * { min-width: 40px; min-height: 40px; }
+}

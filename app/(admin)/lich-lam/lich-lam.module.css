@@ -262,3 +262,7 @@
   .approveButton { flex: 1; }
   .tabs button { padding: 0 12px; }
 }
+
+@media (max-width: 900px) {
+  .reviewButton { min-height: 40px; }
+}

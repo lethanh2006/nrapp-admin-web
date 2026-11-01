@@ -178,8 +178,8 @@
 .assignee > div span { margin-top: 0; color: var(--slate-600); font-size: 13px; }
 .assignee > div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Dưới 900px: mỗi công việc là một khối, không cuộn ngang */
-@media (max-width: 900px) {
+/* Dưới 1180px: mỗi công việc là một khối, không cuộn ngang */
+@media (max-width: 1180px) {
   .taskPanel { overflow-x: visible; }
   .taskPanelHead, .filters { position: static; width: auto; }
   .filters { display: flex; flex-wrap: wrap; }
@@ -200,4 +200,35 @@
   .statsGrid { gap: 8px; }
   .taskPanel { padding: 14px; }
   .focusCard, .workloadCard, .deadlineCard { padding: 16px; }
+}
+
+/* Dạng khối: tên đầy đủ, người phụ trách và hạn cùng một hàng */
+@media (max-width: 1180px) {
+  .taskRow { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; }
+  .taskIdentity > div > strong { overflow: visible; text-overflow: clip; white-space: normal; }
+  .taskIdentity p { display: none; }
+  .assignee { grid-column: 1; }
+  .assignee > div span, .deadline span { display: none; }
+  .deadline { grid-column: 2 / -1; }
+  .statusSelect { grid-column: 1 / 3; }
+}
+
+@media (max-width: 900px) {
+  .modalHeader > button { width: 40px; height: 40px; }
+}
+
+/* Bảng không ép bề ngang; từ 1400px trở xuống cột phụ chuyển xuống dưới */
+.tableHead, .taskList { min-width: 0; }
+
+@media (max-width: 1400px) {
+  .workspaceGrid { grid-template-columns: 1fr; }
+  .sideColumn { display: grid; grid-template-columns: repeat(3, 1fr); }
+}
+
+@media (max-width: 1050px) {
+  .sideColumn { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 680px) {
+  .sideColumn { display: flex; }
 }

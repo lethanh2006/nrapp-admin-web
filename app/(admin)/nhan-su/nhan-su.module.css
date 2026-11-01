@@ -133,3 +133,12 @@
   .actions button { min-height: 40px; }
   .actions .deleteButton { min-width: 40px; }
 }
+
+@media (max-width: 900px) {
+  .modalHeader > button { width: 40px; height: 40px; }
+}
+
+@media (max-width: 900px) {
+  .actions button { min-height: 40px; }
+  .actions .deleteButton { min-width: 40px; }
+}

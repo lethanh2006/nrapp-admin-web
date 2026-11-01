@@ -107,3 +107,24 @@
   .messageActions button, .composerTools button, .messageInput button { min-width: 40px; min-height: 40px; }
   .sendButton { width: 44px; height: 44px; }
 }
+
+/* Khung chat: hàng lưới bám chiều cao khung để ô soạn tin luôn hiện */
+.chatShell { grid-template-rows: minmax(0, 1fr); }
+.conversationPanel, .messagePanel { min-height: 0; }
+.conversationList, .messages { min-height: 0; }
+.messageInput { min-width: 0; }
+
+@media (max-width: 900px) {
+  .chatShell { height: calc(100dvh - 256px); min-height: 420px; }
+}
+
+@media (max-width: 700px) {
+  .chatShell { height: calc(100dvh - 168px); }
+}
+
+.messageInput textarea::placeholder { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+@media (max-width: 700px) {
+  .mobileBack { width: 40px; height: 40px; }
+  .teamStatus button { min-height: 40px; }
+}
