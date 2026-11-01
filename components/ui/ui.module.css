@@ -112,9 +112,9 @@
 .statIcon_red { background: #fef2f2; color: #dc2626; }
 .statIcon_emerald { background: #ecfdf5; color: #059669; }
 .statIcon_amber { background: #fffbeb; color: #d97706; }
-.statIcon_blue { background: #eff6ff; color: #2563eb; }
-.statIcon_violet { background: #f5f3ff; color: #7c3aed; }
-.statIcon_cyan { background: #ecfeff; color: #0891b2; }
+.statIcon_blue { background: var(--slate-100); color: var(--slate-600); }
+.statIcon_violet { background: var(--slate-100); color: var(--slate-600); }
+.statIcon_cyan { background: var(--slate-100); color: var(--slate-600); }
 .statIcon_slate { background: #f1f5f9; color: #475569; }
 .statValue { display: block; margin-top: 11px; color: var(--slate-900); font-size: 24px; font-weight: 700; letter-spacing: -.02em; }
 .statBottom { display: flex; min-height: 18px; align-items: center; gap: 5px; margin-top: 6px; color: var(--slate-400); font-size: 13px; font-weight: 500; }
@@ -161,7 +161,7 @@
 .statTop p { color: var(--slate-600); font-size: 14px; font-weight: 500; }
 .statIcon { width: 32px; height: 32px; border-radius: 8px; }
 .statValue { margin-top: 8px; font-size: 28px; font-weight: 700; letter-spacing: -.02em; line-height: 1.2; }
-.statBottom { flex-wrap: wrap; min-height: 20px; gap: 2px 8px; margin-top: 8px; color: var(--slate-600); font-size: 13px; font-weight: 400; }
+.statBottom { align-items: flex-start; flex-direction: column; min-height: 20px; gap: 2px; margin-top: 8px; color: var(--slate-600); font-size: 13px; font-weight: 400; }
 .trendUp, .trendDown { font-weight: 500; }
 
 @media (max-width: 640px) {

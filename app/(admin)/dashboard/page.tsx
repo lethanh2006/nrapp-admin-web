@@ -5,19 +5,16 @@ import {
   ArrowRight,
   CalendarCheck2,
   CalendarDays,
-  CheckCircle2,
   ChevronRight,
   ClipboardCheck,
   Clock3,
   MessageSquareText,
-  Sparkles,
   UserRoundPlus,
   UsersRound,
   UtensilsCrossed,
   type LucideIcon,
 } from "lucide-react";
 import { Avatar } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { StatCard } from "@/components/ui/stat-card";
 import { useCallback, useEffect, useState } from "react";
@@ -179,53 +176,17 @@ export default function DashboardPage() {
 
   return (
     <div className={styles.page}>
-      <section className={styles.hero}>
+      <header className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.heroEyebrow}>{new Intl.DateTimeFormat("vi-VN", { weekday: "long", day: "2-digit", month: "long" }).format(new Date())}</p>
-          <h1>
-            {greeting}, <span>{user?.name ?? "Quản trị viên"}.</span>
-          </h1>
-          <p className={styles.heroDescription}>
-            Dữ liệu được đồng bộ từ NRApp Gateway. Bạn có {pendingRequests.length} yêu cầu lịch làm đang chờ duyệt.
-          </p>
-          <div className={styles.heroActions}>
-            <Link href="/lich-lam" className={styles.heroPrimaryAction}>
-              Duyệt yêu cầu <ArrowRight size={16} />
-            </Link>
-            <Link href="/cong-viec" className={styles.heroSecondaryAction}>
-              Xem công việc
-            </Link>
-          </div>
+          <h1>{greeting}, {user?.name ?? "Quản trị viên"}</h1>
+          <p className={styles.heroDescription}>Bạn có {pendingRequests.length} yêu cầu lịch làm đang chờ duyệt.</p>
         </div>
-
-        <div className={styles.heroSnapshot}>
-          <div className={styles.snapshotTop}>
-            <span className={styles.snapshotIcon}>
-              <Sparkles size={17} />
-            </span>
-            <div>
-              <small>NHỊP VẬN HÀNH</small>
-              <strong>{attendanceAverage >= 80 ? "Ổn định" : "Cần theo dõi"}</strong>
-            </div>
-            <Badge tone="emerald" dot>
-              {attendanceAverage >= 80 ? "Tốt" : "Theo dõi"}
-            </Badge>
-          </div>
-          <div className={styles.snapshotScore}>
-            <strong>{attendanceAverage}%</strong>
-            <span>hiện diện 7 ngày</span>
-          </div>
-          <div className={styles.snapshotTrack}>
-            <span style={{ width: `${attendanceAverage}%` }} />
-          </div>
-          <div className={styles.snapshotMeta}>
-            <span>
-              <CheckCircle2 size={14} /> {checkedInToday} đã check-in hôm nay
-            </span>
-            <span>{Math.max(employees.length - checkedInToday, 0)} chưa ghi nhận</span>
-          </div>
+        <div className={styles.heroActions}>
+          <Link href="/cong-viec" className="button-secondary">Xem công việc</Link>
+          <Link href="/lich-lam" className="button-primary">Duyệt yêu cầu <ArrowRight size={16} /></Link>
         </div>
-      </section>
+      </header>
 
       <section className={styles.statsGrid} aria-label="Chỉ số vận hành">
         {kpis.map((item) => {
@@ -259,7 +220,7 @@ export default function DashboardPage() {
               <strong>{attendanceAverage}%</strong>
               <span>trung bình tuần</span>
             </div>
-            <span className={styles.chartTrend}>Dữ liệu NRApp Gateway</span>
+            <span className={styles.chartTrend}>{checkedInToday} đã check-in hôm nay · {Math.max(employees.length - checkedInToday, 0)} chưa ghi nhận</span>
           </div>
 
           <div className={styles.chartFrame}>

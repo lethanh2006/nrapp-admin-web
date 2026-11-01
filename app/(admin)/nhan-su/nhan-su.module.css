@@ -7,12 +7,12 @@
 .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 .directory { overflow: hidden; border: 1px solid var(--slate-200); border-radius: 12px; background: white; box-shadow: var(--shadow-sm); }
 .directoryHeader { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--slate-100); padding: 17px 19px; }
-.directoryHeader small { color: #2563eb; font-size: 12px; font-weight: 700; }
+.directoryHeader small { color: var(--brand-700); font-size: 12px; font-weight: 700; }
 .directoryHeader h2 { margin: 4px 0 2px; color: var(--slate-900); font-size: 16px; }
 .directoryHeader p { margin: 0; color: var(--slate-400); font-size: 12px; }
-.toolbar { display: flex; min-height: 61px; align-items: center; gap: 9px; border-bottom: 1px solid var(--slate-100); padding: 10px 16px; background: #fbfdff; }
+.toolbar { display: flex; min-height: 61px; align-items: center; gap: 9px; border-bottom: 1px solid var(--slate-100); padding: 10px 16px; background: white; }
 .search { display: flex; width: min(440px, 100%); align-items: center; gap: 8px; border: 1px solid var(--slate-200); border-radius: 8px; padding: 0 11px; background: white; color: var(--slate-400); }
-.search:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px #eff6ff; }
+.search:focus-within { border-color: var(--brand-600); box-shadow: var(--focus-ring); }
 .search input { min-width: 0; height: 39px; flex: 1; border: 0; outline: 0; color: var(--slate-800); font-size: 13px; }
 .search button { display: grid; cursor: pointer; place-items: center; background: transparent; color: var(--slate-400); }
 .roleFilter { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--slate-200); border-radius: 8px; padding: 0 10px; background: white; color: var(--slate-500); }
@@ -21,7 +21,7 @@
 .userHead, .userRow { display: grid; grid-template-columns: 1.3fr 1.2fr .7fr 1.15fr .9fr; align-items: center; gap: 14px; }
 .userHead { min-height: 38px; padding: 0 18px; background: var(--slate-50); color: var(--slate-400); font-size: 12px; font-weight: 700; }
 .userRow { min-height: 76px; border-top: 1px solid var(--slate-100); padding: 11px 18px; }
-.userRow:hover { background: #fafcff; }
+.userRow:hover { background: var(--slate-50); }
 .identity { display: flex; min-width: 0; align-items: center; gap: 9px; }
 .identity > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .identity strong { overflow: hidden; color: var(--slate-800); font-size: 13px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
@@ -39,24 +39,24 @@
 .modal { width: min(540px, calc(100vw - 28px)); overflow: hidden; }
 .modalHeader { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--slate-100); padding: 16px 18px; }
 .modalHeader > div { display: flex; align-items: center; gap: 10px; }
-.modalHeader > div > span { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 8px; background: #eff6ff; color: #2563eb; }
-.modalHeader small { display: block; color: #2563eb; font-size: 12px; font-weight: 700; }
+.modalHeader > div > span { display: grid; width: 40px; height: 40px; place-items: center; border-radius: 8px; background: var(--brand-50); color: var(--brand-700); }
+.modalHeader small { display: block; color: var(--brand-700); font-size: 12px; font-weight: 700; }
 .modalHeader h2 { margin: 3px 0 0; color: var(--slate-900); font-size: 16px; }
 .modalHeader > button { display: grid; width: 34px; height: 34px; cursor: pointer; place-items: center; border-radius: 8px; background: var(--slate-100); color: var(--slate-500); }
 .modalBody { display: flex; flex-direction: column; gap: 13px; padding: 18px; }
 .modalBody label { display: flex; flex-direction: column; gap: 6px; }
 .inputIcon { display: flex; align-items: center; gap: 8px; border: 1px solid var(--slate-200); border-radius: 8px; padding: 0 10px; color: var(--slate-400); }
-.inputIcon:focus-within { border-color: #93c5fd; box-shadow: 0 0 0 3px #eff6ff; }
+.inputIcon:focus-within { border-color: var(--brand-600); box-shadow: var(--focus-ring); }
 .inputIcon input { min-width: 0; height: 41px; flex: 1; border: 0; outline: 0; color: var(--slate-800); font-size: 13px; }
 .accountSummary { display: flex; align-items: center; gap: 11px; border: 1px solid var(--slate-200); border-radius: 8px; padding: 11px; background: var(--slate-50); }
 .accountSummary > div { display: flex; min-width: 0; flex-direction: column; gap: 3px; }
 .accountSummary strong { color: var(--slate-800); font-size: 13px; }
 .accountSummary span { color: var(--slate-500); font-size: 12px; }
 .accountSummary code { overflow: hidden; color: var(--slate-400); font-size: 12px; text-overflow: ellipsis; }
-.permissionNote { display: flex; align-items: flex-start; gap: 9px; border: 1px solid #bfdbfe; border-radius: 8px; padding: 10px; background: #eff6ff; color: #1d4ed8; }
+.permissionNote { display: flex; align-items: flex-start; gap: 9px; border: 1px solid var(--brand-200); border-radius: 8px; padding: 10px; background: var(--brand-50); color: var(--brand-800); }
 .permissionNote p { display: flex; margin: 0; flex-direction: column; gap: 3px; }
 .permissionNote strong { font-size: 12px; }
-.permissionNote span { color: #3b82f6; font-size: 12px; line-height: 1.5; }
+.permissionNote span { color: var(--brand-800); font-size: 12px; line-height: 1.5; }
 .modalFooter { display: flex; justify-content: flex-end; gap: 8px; border-top: 1px solid var(--slate-100); padding: 12px 18px; background: var(--slate-50); }
 
 @media (max-width: 1050px) {
@@ -82,3 +82,41 @@
   .stats { grid-template-columns: 1fr 1fr; gap: 8px; }
   .directoryHeader p { display: none; }
 }
+
+/* Bảng: hàng tiêu đề xám, hàng chỉ ngăn bằng đường kẻ */
+.stats { gap: 16px; }
+.directoryHeader { padding: 16px 20px; }
+.directoryHeader h2 { margin: 0; font-weight: 600; }
+.toolbar { min-height: 0; gap: 8px; padding: 12px 20px; }
+.search input, .roleFilter select { height: 36px; font-size: 14px; }
+.roleFilter select { font-weight: 400; }
+.result { color: var(--slate-600); font-size: 14px; font-weight: 400; }
+.userHead, .userRow { grid-template-columns: minmax(0, 1.8fr) minmax(0, .7fr) minmax(0, 1fr) auto; gap: 16px; }
+.userHead { min-height: 40px; padding: 0 20px; color: var(--slate-600); font-size: 12px; font-weight: 500; letter-spacing: .03em; text-transform: uppercase; }
+.userHead span:last-child { width: 148px; }
+.userRow { min-height: 64px; padding: 10px 20px; }
+.userRow:hover { background: var(--slate-50); }
+.identity { gap: 12px; }
+.identity > div { gap: 0; }
+.identity strong { color: var(--slate-900); font-size: 14px; font-weight: 500; }
+.identity small { color: var(--slate-600); font-size: 14px; }
+.userRow code { border-radius: 0; padding: 0; background: transparent; color: var(--slate-600); font-size: 13px; }
+.actions { width: 148px; }
+.actions button { min-height: 32px; gap: 6px; padding: 0 10px; font-size: 13px; font-weight: 500; }
+.actions .deleteButton { min-width: 32px; }
+.modalHeader h2 { font-weight: 600; }
+.modalHeader small { font-size: 13px; font-weight: 500; }
+.modalHeader > div > span { width: 36px; height: 36px; }
+.inputIcon input { font-size: 14px; }
+.accountSummary strong, .permissionNote strong { font-size: 14px; font-weight: 500; }
+.accountSummary span, .accountSummary code, .permissionNote span { color: var(--slate-600); font-size: 13px; }
+
+@media (max-width: 1050px) {
+  .userRow { display: flex; }
+  .userHead span:last-child, .actions { width: auto; }
+}
+
+@media (min-width: 1051px) {
+  .userHead span:last-child, .actions { width: 172px; }
+}
+.actions button { white-space: nowrap; }

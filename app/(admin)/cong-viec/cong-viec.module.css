@@ -48,7 +48,7 @@
 .assignee { display: flex; min-width: 0; align-items: center; gap: 8px; }
 .assignee > div { min-width: 0; }
 .assignee strong { display: block; overflow: hidden; color: var(--slate-700); font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
-.assignee span { display: block; margin-top: 3px; color: var(--slate-400); font-size: 12px; }
+.assignee > div span { display: block; margin-top: 3px; color: var(--slate-400); font-size: 12px; }
 .deadline { display: flex; align-items: center; gap: 7px; color: var(--slate-400); }
 .deadline > div { min-width: 0; }
 .deadline strong { display: block; color: var(--slate-600); font-size: 12px; }

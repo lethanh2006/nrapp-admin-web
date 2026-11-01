@@ -135,7 +135,7 @@ export default function EmployeeDirectoryPage() {
 
       <section className={styles.directory}>
         <header className={styles.directoryHeader}>
-          <div><small>DANH BẠ HỆ THỐNG</small><h2>Tài khoản NRApp</h2><p>Backend hiện cung cấp tên, email, mã tài khoản và vai trò.</p></div>
+          <div><h2>Tài khoản NRApp</h2></div>
           <Badge tone={error ? "red" : "emerald"} dot>{error ? "Mất đồng bộ" : `${users.length} tài khoản`}</Badge>
         </header>
         <div className={styles.toolbar}>
@@ -145,13 +145,12 @@ export default function EmployeeDirectoryPage() {
         </div>
 
         <div className={styles.userList}>
-          <div className={styles.userHead}><span>Tài khoản</span><span>Email</span><span>Vai trò</span><span>Mã người dùng</span><span>Thao tác</span></div>
+          <div className={styles.userHead}><span>Tài khoản</span><span>Vai trò</span><span>Mã người dùng</span><span>Thao tác</span></div>
           {filteredUsers.map((user, index) => {
             const role = roleOf(user);
             const name = userName(user);
             return <article className={styles.userRow} key={user._id}>
-              <div className={styles.identity}><Avatar initials={initials(name)} tone={index % 2 ? "blue" : "slate"} size="md" /><div><strong>{name}</strong><small>Tài khoản đã đồng bộ</small></div></div>
-              <div className={styles.email}><Mail size={14} /><span>{user.email || "Chưa có email"}</span></div>
+              <div className={styles.identity}><Avatar initials={initials(name)} tone={index % 2 ? "blue" : "slate"} size="md" /><div><strong>{name}</strong><small>{user.email || "Chưa có email"}</small></div></div>
               <div><Badge tone={role === "admin" ? "teal" : "blue"} dot>{roleLabels[role]}</Badge></div>
               <code>{user._id}</code>
               <div className={styles.actions}><button type="button" onClick={() => setEditor({ mode: "role", user, role })}><ShieldCheck size={14} /> Phân quyền</button><button className={styles.deleteButton} type="button" onClick={() => void removeUser(user)} disabled={busy === user._id} aria-label={`Xóa ${name}`}><Trash2 size={15} /></button></div>
