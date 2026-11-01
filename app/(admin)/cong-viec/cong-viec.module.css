@@ -177,3 +177,27 @@
 .assignee strong { color: var(--slate-900); font-size: 14px; font-weight: 500; }
 .assignee > div span { margin-top: 0; color: var(--slate-600); font-size: 13px; }
 .assignee > div span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Dưới 900px: mỗi công việc là một khối, không cuộn ngang */
+@media (max-width: 900px) {
+  .taskPanel { overflow-x: visible; }
+  .taskPanelHead, .filters { position: static; width: auto; }
+  .filters { display: flex; flex-wrap: wrap; }
+  .searchBox { flex: 1 1 100%; width: 100%; min-height: 44px; }
+  .selectWrap { flex: 1 1 calc(50% - 30px); width: auto; min-height: 44px; }
+  .tableHead { display: none; }
+  .taskList { min-width: 0; }
+  .taskRow { grid-template-columns: minmax(0, 1fr) auto; gap: 10px 12px; min-height: 0; padding: 14px 0; }
+  .taskIdentity, .progressCell { grid-column: 1 / -1; }
+  .taskIdentity strong, .taskIdentity p { overflow: visible; text-overflow: clip; white-space: normal; }
+  .assignee, .deadline { grid-column: 1 / -1; }
+  .statusSelect { height: 40px; }
+  .moreButton { width: 40px; height: 40px; }
+  .statusTabs { min-width: 0; }
+}
+
+@media (max-width: 680px) {
+  .statsGrid { gap: 8px; }
+  .taskPanel { padding: 14px; }
+  .focusCard, .workloadCard, .deadlineCard { padding: 16px; }
+}

@@ -15,9 +15,7 @@ import {
   MessageCircle,
   PanelLeftClose,
   PanelLeftOpen,
-  ScanLine,
   Search,
-  UserCircle,
   Users,
   UtensilsCrossed,
   X,
@@ -431,17 +429,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       <nav className={styles.mobileBottomNav} aria-label="Điều hướng nhanh">
-        <Link href="/dashboard" className={pathname === "/dashboard" ? styles.mobileNavActive : ""}>
-          <LayoutDashboard size={21} />
-          <span>Tổng quan</span>
-        </Link>
-        <Link href="/lich-lam" className={styles.scanButton} aria-label="Mở quản lý chấm công">
-          <ScanLine size={25} />
-        </Link>
-        <Link href="/ho-so" className={pathname === "/ho-so" ? styles.mobileNavActive : ""}>
-          <UserCircle size={22} />
-          <span>Hồ sơ</span>
-        </Link>
+        {[
+          { href: "/dashboard", label: "Tổng quan", icon: LayoutDashboard },
+          { href: "/lich-lam", label: "Lịch làm", icon: CalendarDays },
+          { href: "/cong-viec", label: "Công việc", icon: ClipboardCheck },
+          { href: "/can-tin", label: "Căn tin", icon: UtensilsCrossed },
+          { href: "/nhan-su", label: "Nhân sự", icon: Users },
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <Link href={item.href} className={pathname.startsWith(item.href) ? styles.mobileNavActive : ""} key={item.href}>
+              <Icon size={21} />
+              <span>{item.label}</span>
+            </Link>
+          );
+        })}
       </nav>
 
     </div>

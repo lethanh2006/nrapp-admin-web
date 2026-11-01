@@ -158,7 +158,7 @@ export default function ChatPage() {
   };
 
   return (
-    <div>
+    <div className={styles.chatPage}>
       <PageHeader
         title="Trò chuyện"
         description="Trao đổi nhanh với nhân sự và theo dõi hội thoại trong cùng một không gian làm việc."

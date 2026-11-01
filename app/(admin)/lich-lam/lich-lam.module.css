@@ -247,3 +247,18 @@
 @media (max-width: 680px) {
   .tabs button { min-width: 0; }
 }
+
+@media (max-width: 900px) {
+  .miniTabs button { min-height: 40px; }
+  .rejectButton, .approveButton, .undoButton { min-height: 40px; }
+  .rejectButton { width: 40px; }
+  .approveButton { padding: 0 14px; }
+}
+
+@media (max-width: 680px) {
+  .statsGrid { gap: 8px; }
+  .requestItem { grid-template-columns: 40px minmax(0, 1fr); }
+  .requestActions { grid-column: 1 / -1; }
+  .approveButton { flex: 1; }
+  .tabs button { padding: 0 12px; }
+}
