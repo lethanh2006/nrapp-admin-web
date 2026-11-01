@@ -43,6 +43,7 @@ const statusMeta: Record<TaskStatus, { label: string; tone: BadgeTone; progress:
 };
 
 const priorityMeta: Record<TaskPriority, { label: string; tone: BadgeTone }> = {
+  urgent: { label: "Khẩn cấp", tone: "red" },
   high: { label: "Ưu tiên cao", tone: "red" },
   medium: { label: "Trung bình", tone: "amber" },
   low: { label: "Ưu tiên thấp", tone: "slate" },
@@ -62,6 +63,10 @@ const emptyForm = {
   due: "",
   priority: "medium" as TaskPriority,
 };
+
+function priorityInfoOf(task: Task) {
+  return priorityMeta[task.priority] ?? priorityMeta.medium;
+}
 
 function taskTone(index: number): BadgeTone {
   return (["violet", "blue", "amber", "cyan", "teal"] as BadgeTone[])[index % 5];
@@ -224,7 +229,7 @@ export default function TasksPage() {
               <Flag size={15} />
               <select value={priority} onChange={(event) => setPriority(event.target.value as "all" | TaskPriority)} aria-label="Lọc mức ưu tiên">
                 <option value="all">Mọi ưu tiên</option>
-                <option value="high">Ưu tiên cao</option>
+                <option value="urgent">Khẩn cấp</option><option value="high">Ưu tiên cao</option>
                 <option value="medium">Trung bình</option>
                 <option value="low">Ưu tiên thấp</option>
               </select>
@@ -240,7 +245,7 @@ export default function TasksPage() {
           <div className={styles.taskList}>
             {filteredTasks.map((task, index) => {
               const status = statusMeta[task.status];
-              const priorityInfo = priorityMeta[task.priority];
+              const priorityInfo = priorityInfoOf(task);
               return (
                 <article className={styles.taskRow} key={task.id}>
                   <div className={styles.taskIdentity}>
@@ -320,7 +325,7 @@ export default function TasksPage() {
               <AlertCircle size={18} />
             </div>
             <div className={styles.deadlineList}>
-              {upcomingTasks.map((task) => <div key={task.id}><span className={styles.dateTile}><CalendarClock size={18} /></span><p><strong>{task.title}</strong><small>{task.due}</small></p><Badge tone={priorityMeta[task.priority].tone}>{priorityMeta[task.priority].label}</Badge></div>)}
+              {upcomingTasks.map((task) => <div key={task.id}><span className={styles.dateTile}><CalendarClock size={18} /></span><p><strong>{task.title}</strong><small>{task.due}</small></p><Badge tone={priorityInfoOf(task).tone}>{priorityInfoOf(task).label}</Badge></div>)}
               {!upcomingTasks.length ? <p>Không có công việc đang mở.</p> : null}
             </div>
           </section>

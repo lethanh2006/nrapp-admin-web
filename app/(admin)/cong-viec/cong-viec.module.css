@@ -38,7 +38,7 @@
 .taskRow:hover { border-radius: 8px; background: #fcfcfd; }
 .taskIdentity { display: flex; min-width: 0; gap: 10px; }
 .taskMark { width: 4px; height: 58px; flex: 0 0 auto; border-radius: 99px; }
-.mark_high { background: #ef4444; } .mark_medium { background: #f59e0b; } .mark_low { background: #cbd5e1; }
+.mark_urgent { background: #b91c1c; } .mark_high { background: #ef4444; } .mark_medium { background: #f59e0b; } .mark_low { background: #cbd5e1; }
 .taskIdentity > div { min-width: 0; }
 .taskTitleLine { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
 .taskTitleLine > span { color: var(--brand-700); font-size: 12px; font-weight: 700; }
